@@ -1,14 +1,22 @@
 import logging
 from contextlib import contextmanager
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from . import OperationInterruptedException
+from . import config
 
 _logger = logging.getLogger(__name__)
+engine = create_engine(config.SQLALCHEMY_DATABASE_URI, client_encoding='utf8')
+Session = sessionmaker(bind=engine)
 
 
 @contextmanager
-def session_scope(SessionFactory):
+def session_scope(SessionFactory=None):
     """Provide a transactional scope around a series of operations."""
+    if SessionFactory is None:
+        SessionFactory = Session
+
     session = SessionFactory()
     try:
         yield session

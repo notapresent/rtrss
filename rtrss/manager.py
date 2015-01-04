@@ -17,13 +17,15 @@ class Manager(object):
     def update(self):
         _logger.debug('Starting update')
         scraper = Scraper(self.config)
-        topics = self.load_topics(scraper.get_latest_topics())
 
-        for topic in topics:
-            self.process_topic(topic)
-            self.db.commit()
+        latest = scraper.get_latest_topics()
+        existing = self.load_topics(latest.keys())
+        new = self.new_topics(latest, existing)
 
-        self.invalidate_cache()
+        for id, topic in new.items():
+            self.process_topic(id, topic)
+
+        # self.invalidate_cache()
 
     def cleanup(self):
         _logger.info('Cleanup')
@@ -31,14 +33,30 @@ class Manager(object):
     def daily_reset(self):
         _logger.info('Daily reset')
 
-    def load_topics(self, latest):
-        '''Returns list of dicts'''
-        existing = self.db.query(Topic).\
-            filter(Topic.id.in_([t['id'] for t in latest])).\
-            all()
-        return []
+    def load_topics(self, ids):
+        '''
+        Loads existing topics from database, returns dict(topic_id: infohash)
+        '''
+        existing = self.db.query(Topic).filter(Topic.id.in_(ids)).all()
+        return {t.id: t.torrent.infohash for t in existing}
 
-    def process_topic(self, topic):
+    def new_topics(self, latest, existing):
+        existing_ids = existing.keys()
+        result = dict()
+
+        for id, topic in latest.items():
+            # new topic
+            if id not in existing_ids:
+                result[id] = topic
+
+            # updated existing topic
+            elif topic['torrent_updated']:
+                result[id] = topic
+                result[id]['old_infohash'] = existing[id]
+
+        return result
+
+    def process_topic(self, id, topic):
         pass
 
     def invalidate_cache(self):

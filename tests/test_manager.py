@@ -23,8 +23,8 @@ class DBTestCase(unittest.TestCase):
 
 
 class ManagerTestCase(DBTestCase):
-    def test_load_topics(self):
+    def test_load_topics_returns_empty_(self):
         cfg = MockConfig({'SQLALCHEMY_DATABASE_URI': DB_URL})
         with session_scope(Session) as session:
             m = Manager(cfg, session)
-            self.assertIsInstance(m.load_topics([{'id': 1}]), list)
+            self.assertEqual(m.load_topics([-1]), dict())

@@ -4,7 +4,7 @@ from rtrss.scraper import Scraper
 
 
 class ScraperTestCase(unittest.TestCase):
-    def testLatestTopics(self):
-        s = Scraper(MockConfig(
-            {'FEED_URL': 'http://feed.rutracker.org/atom/f/0.atom'}))
-        self.assertIsInstance(s.get_latest_topics(), list)
+    def test_latest_topics(self):
+        cfg = MockConfig({'TRACKER_HOST': 'rutracker.org'})
+        s = Scraper(cfg)
+        self.assertIsInstance(s.get_latest_topics(), dict)

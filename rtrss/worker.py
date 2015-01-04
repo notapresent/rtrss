@@ -3,18 +3,25 @@ import sys
 import time
 import logging
 from schedule import Scheduler
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from . import config
 from . import OperationInterruptedException
 from .manager import Manager
 from .util import make_localtime
-from .dbutil import session_scope
+from .database import session_scope
+
+# Feed update interval, minutes
+UPDATE_INTERVAL = 5
+
+# Database cleanup interval, minutes
+CLEANUP_INTERVAL = 60
+
+# Perform daily mainenance at this time
+DAILY_MAINTENANCE_TIME = '00:15'
+
+# Timeone for the DAILY_MAINTENANCE_TIME
+TZNAME = 'Europe/Moscow'
 
 _logger = logging.getLogger(__name__)
-
-engine = create_engine(config.SQLALCHEMY_DATABASE_URI, client_encoding='utf8')
-Session = sessionmaker(bind=engine)
 
 
 class Worker(object):
@@ -24,20 +31,18 @@ class Worker(object):
         self.setup_schedule()
 
     def setup_schedule(self):
-        self.scheduler.every(self.config.UPDATE_INTERVAL).minutes.\
+        self.scheduler.every(UPDATE_INTERVAL).minutes.\
             do(self.run_task, 'update')
 
-        self.scheduler.every(self.config.CLEANUP_INTERVAL).minutes.\
+        self.scheduler.every(CLEANUP_INTERVAL).minutes.\
             do(self.run_task, 'cleanup')
 
-        localtime = make_localtime(
-            self.config.DAILY_MAINTENANCE_TIME,
-            self.config.TZNAME)
+        localtime = make_localtime(DAILY_MAINTENANCE_TIME, TZNAME)
         self.scheduler.every().day.at(localtime.strftime('%H:%M')).\
             do(self.run_task, 'daily_reset')
 
     def run_task(self, task_name):
-        with session_scope(Session) as session:
+        with session_scope() as session:
             manager = Manager(self.config, session)
             try:
                 getattr(manager, task_name)()
