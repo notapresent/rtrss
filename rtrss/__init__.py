@@ -6,6 +6,6 @@ class OperationInterruptedException(Exception):
     pass
 
 
-class TException(Exception):
+class TopicException(Exception):
     '''Raised if error occured during topic processing'''
     pass

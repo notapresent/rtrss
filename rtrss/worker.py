@@ -16,7 +16,7 @@ UPDATE_INTERVAL = 5
 CLEANUP_INTERVAL = 60
 
 # Perform daily mainenance at this time
-DAILY_MAINTENANCE_TIME = '00:15'
+DAILY_MAINTENANCE_TIME = '00:05'
 
 # Timeone for the DAILY_MAINTENANCE_TIME
 TZNAME = 'Europe/Moscow'

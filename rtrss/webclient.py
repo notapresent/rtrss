@@ -3,6 +3,7 @@ import logging
 import requests
 import time
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
+from .util import save_debug_file
 from . import OperationInterruptedException
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
@@ -16,6 +17,13 @@ LOGGED_IN_STR = u'Вы зашли как: &nbsp;<a href="./profile.php?mode='\
 
 # Time between page download requests (seconds)
 PAGE_DOWNLOAD_DELAY = 0.5
+
+# Time between torrent file download requests (seconds)
+TORRENT_DOWNLOAD_DELAY = 5
+
+DL_LIMIT_MSG = u'Вы уже исчерпали суточный лимит скачиваний торрент-файлов'
+
+CAPTCHA_STR = u'<img src="http://static.{ho}/captcha/'
 
 _logger = logging.getLogger(__name__)
 
@@ -31,9 +39,9 @@ class WebClient(object):
 
     def get_feed(self):
         url = FEED_URL.format(host=self.config.TRACKER_HOST, category_id=0)
-        return self.request('get', url).content
+        return self.request(url, 'get').content
 
-    def request(self, method, url, **kwargs):
+    def request(self, url, method, **kwargs):
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
@@ -44,20 +52,20 @@ class WebClient(object):
             return response
         # TODO tracker maintenance should be handled here
 
-    def get_page(self, url, auth_required=True):
-        html = self.request('get', url).text
+    def html(self, url, method='get', auth_required=True, *args, **kwargs):
+        html = self.request(url, method, *args, **kwargs).text
         time.sleep(PAGE_DOWNLOAD_DELAY)
 
         if auth_required and not self.is_signed_in(html):
             self.sign_in(self.user)
-            html = self.request('get', url).text
+            html = self.request(url, 'get').text
             time.sleep(PAGE_DOWNLOAD_DELAY)
 
         return html
 
     def get_topic(self, id):
         url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
-        return self.get_page(url)
+        return self.html(url)
 
     def load_torrentfile(self, id):
         pass    # TODO
@@ -76,16 +84,21 @@ class WebClient(object):
 
     def sign_in(self, user):
         login_url = LOGIN_URL.format(host=self.config.TRACKER_HOST)
-        post_data = {'login_username': user.username,
-                     'login_password': user.password,
-                     'login': '%C2%F5%EE%E4'}
+        postdata = {'login_username': user.username,
+                    'login_password': user.password,
+                    'login': '%C2%F5%EE%E4'}
 
-        html = self.request('post', login_url, data=post_data).text
+        html = self.html(login_url, 'post', data=postdata, auth_required=False)
 
         if self.is_signed_in(html):
             _logger.info('User %s signed in', self.user)
         else:
             message = "User {} failed to sign in".format(self.user)
+
+            if self.config.DEBUG:
+                filename = 'user-signin-{}.html'.format(user.id)
+                save_debug_file(filename, html.encode('windows-1251'))
+
             raise OperationInterruptedException(message)
 
 # def download_torrentfile(self, tid, *args, **kwargs):

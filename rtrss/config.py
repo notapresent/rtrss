@@ -5,7 +5,7 @@ import logging
 _devdb = 'postgresql://postgres:postgres@localhost/rtrss_dev'
 SQLALCHEMY_DATABASE_URI = os.environ.get('OPENSHIFT_POSTGRESQL_DB_URL', _devdb)
 
-# directory to store torrent cache and debug data. write access required
+# directory to store runtime data, write access required
 _dev_datadir = os.path.join(os.environ.get('HOME'), 'data')
 DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', _dev_datadir)
 

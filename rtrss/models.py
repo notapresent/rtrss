@@ -15,12 +15,14 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     parent_id = Column(Integer, ForeignKey('categories.id'))
     title = Column(String(500), nullable=False)
+    is_toplevel = Column(Boolean, nullable=False, default=False)
+    has_torrents = Column(Boolean, nullable=False, default=False)
 
     # parent = relationship("Category", backref=backref('subcategories'))
     parent = relation('Category', remote_side=[id])
 
     def __repr__(self):
-        return "<Category(id={}, title='{}')>".format(self.id, self.title)
+        return u"<Category(id={}, title='{}')>".format(self.id, self.title)
 
 
 class User(Base):
@@ -35,7 +37,7 @@ class User(Base):
     cookies = Column(PickleType, default=dict())
 
     def __repr__(self):
-        return "<User(id={}, username='{}')>".format(self.id, self.username)
+        return u"<User(id={}, username='{}')>".format(self.id, self.username)
 
 
 class Topic(Base):
@@ -48,7 +50,7 @@ class Topic(Base):
     category = relationship("Category", backref=backref('topics'))
 
     def __repr__(self):
-        return "<Topic(id={}, title='{}')>".format(self.id, self.title)
+        return u"<Topic(id={}, title='{}')>".format(self.id, self.title)
 # TODO
 # Index('idx_category_created', Topic.category_id, Torrent.created.desc())
 
@@ -64,6 +66,6 @@ class Torrent(Base):
     topic = relationship('Topic', uselist=False)
 
     def __repr__(self):
-        return "<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)
+        return u"<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)
 # TODO
 # Index('idx_category_created', Torrent.category_id, Torrent.created.desc())

@@ -55,8 +55,61 @@ class Scraper(object):
             'torrent_updated': torrent_updated
         })
 
-    def load_topic(self, tid):
-        pass
+    def load_topic(self, tid, user):
+        wc = WebClient(self.config, user)
+        html = wc.get_topic(tid)
+        return self.parse_topic(html)
 
     def parse_topic(self, html):
-        pass
+        parser = etree.HTMLParser(encoding='utf-8')
+        tree = etree.fromstring(html, parser=parser)
+
+        hashspans = tree.xpath('//span[@id="tor-hash"]')
+        torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
+
+        if not hashspans or not torrentlinks:
+            return None
+
+        catlinks = tree.xpath('//*[@class="nav w100 pad_2"]/a')
+        categories = self.parse_categories(catlinks)
+
+        return dict({
+            'infohash': hashspans[0].text,
+            'categories': categories
+        })
+
+    def parse_categories(self, links):
+        result = list()
+        parent_id = None
+
+        for link in links:
+            parsed = self.parse_category(link)
+            if parsed:
+                parsed['parent_id'] = parent_id
+                parent_id = parsed['id']
+                result.append(parsed)
+        return result
+
+    def parse_category(self, c):
+        href = c.get('href').strip('./')
+
+        if href == 'index.php': # Root category
+            return dict({
+                'id': 0,
+                'title': 'Root',
+                'is_toplevel': True,
+                'has_torrents': True
+            })
+
+        if '?' not in href or '=' not in href:
+            return None
+
+        param, id = href.split('?')[1].split('=')
+
+        return dict({
+            'id': int(id),
+            'title': c.text,
+            'is_toplevel': param == 'c',
+            'has_torrents': True
+        })
+
