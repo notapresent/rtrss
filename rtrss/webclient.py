@@ -47,18 +47,17 @@ class WebClient(object):
     def get_page(self, url, auth_required=True):
         html = self.request('get', url).text
         time.sleep(PAGE_DOWNLOAD_DELAY)
-        
+
         if auth_required and not self.is_signed_in(html):
             self.sign_in(self.user)
             html = self.request('get', url).text
             time.sleep(PAGE_DOWNLOAD_DELAY)
-        
+
         return html
 
     def get_topic(self, id):
         url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
         return self.get_page(url)
-
 
     def load_torrentfile(self, id):
         pass    # TODO
@@ -74,7 +73,6 @@ class WebClient(object):
         else:
             self.sign_in(user)
             user.cookies = dict_from_cookiejar(self.session.cookies)
-
 
     def sign_in(self, user):
         login_url = LOGIN_URL.format(host=self.config.TRACKER_HOST)
