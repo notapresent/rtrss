@@ -15,8 +15,7 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     parent_id = Column(Integer, ForeignKey('categories.id'))
     title = Column(String(500), nullable=False)
-    is_toplevel = Column(Boolean, nullable=False, default=False)
-    has_torrents = Column(Boolean, nullable=False, default=False)
+    is_subforum = Column(Boolean, nullable=False, default=True)
 
     # parent = relationship("Category", backref=backref('subcategories'))
     parent = relation('Category', remote_side=[id])
@@ -46,24 +45,26 @@ class Topic(Base):
     id = Column(Integer, primary_key=True)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
     title = Column(String(500), nullable=False)
-    created = Column(DateTime, nullable=False)
-    category = relationship("Category", backref=backref('topics'))
+    updated_at = Column(DateTime, nullable=False)    # UTC
+
+    category = relationship("Category", backref='topics')
+    torrent = relationship('Torrent', uselist=False, backref='topic')
 
     def __repr__(self):
         return u"<Topic(id={}, title='{}')>".format(self.id, self.title)
 # TODO
-# Index('idx_category_created', Topic.category_id, Torrent.created.desc())
+# Index('ix_category_updated_at', Topic.category_id, Torrent.updated_at.desc())
 
 
 class Torrent(Base):
     __tablename__ = 'torrents'
-    infohash = Column(String(40), primary_key=True)
-    tid = Column(Integer, ForeignKey('topics.id'))
+
+    tid = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+    infohash = Column(String(40))
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
-    created = Column(DateTime, nullable=False)  # TODO
 
-    topic = relationship('Topic', uselist=False)
+    # topic = relationship('Topic', uselist=False)
 
     def __repr__(self):
         return u"<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)

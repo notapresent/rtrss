@@ -55,7 +55,12 @@ class Worker(object):
         try:
             while True:
                 self.scheduler.run_pending()
-                time.sleep(self.scheduler.idle_seconds)
+                delay = self.scheduler.idle_seconds
+
+                if delay < 0:
+                    delay = 0
+
+                time.sleep(delay)
 
         except (KeyboardInterrupt, SystemExit):
             _logger.info('Worker caught interrupt signal, exiting')

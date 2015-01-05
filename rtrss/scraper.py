@@ -44,15 +44,15 @@ class Scraper(object):
 
         if title[0:len(UPDATED_MARKER)] == UPDATED_MARKER:
             title = title[len(UPDATED_MARKER):]
-            torrent_updated = True
+            changed = True
         else:
-            torrent_updated = False
+            changed = False
 
         return dict({
             'title': title.strip(),
             'id': int(id),
-            'updated_at': updated_at.replace(tzinfo=pytz.utc),
-            'torrent_updated': torrent_updated
+            'updated_at': updated_at.replace(tzinfo=None),
+            'changed': changed
         })
 
     def load_topic(self, tid, user):
@@ -65,17 +65,13 @@ class Scraper(object):
         tree = etree.fromstring(html, parser=parser)
 
         hashspans = tree.xpath('//span[@id="tor-hash"]')
-        torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
-
-        if not hashspans or not torrentlinks:
-            return None
-
+        # torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
         catlinks = tree.xpath('//*[@class="nav w100 pad_2"]/a')
-        categories = self.parse_categories(catlinks)
 
         return dict({
-            'infohash': hashspans[0].text,
-            'categories': categories
+            'infohash': hashspans[0].text if hashspans else None,
+            'categories': self.parse_categories(catlinks)
+            # 'has_torrent': bool(torrentlinks)
         })
 
     def parse_categories(self, links):
@@ -96,9 +92,8 @@ class Scraper(object):
         if href == 'index.php': # Root category
             return dict({
                 'id': 0,
-                'title': 'Root',
-                'is_toplevel': True,
-                'has_torrents': True
+                'title': u'Все разделы',
+                'is_subforum': False,
             })
 
         if '?' not in href or '=' not in href:
@@ -109,7 +104,6 @@ class Scraper(object):
         return dict({
             'id': int(id),
             'title': c.text,
-            'is_toplevel': param == 'c',
-            'has_torrents': True
+            'is_subforum': param == 'f',
         })
 
