@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
     Boolean, BigInteger, DateTime
-from sqlalchemy.orm import relationship, backref, relation
+from sqlalchemy.orm import relationship, relation
 from sqlalchemy.ext.declarative import declarative_base
 
 _logger = logging.getLogger(__name__)

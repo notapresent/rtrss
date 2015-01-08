@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
 import datetime
-import pytz
+import bencode
 from lxml import etree
 from dateutil import parser
 from rtrss.webclient import WebClient
-
+from . import TopicException
+from .util import save_debug_file
 _logger = logging.getLogger(__name__)
 
 # Timestamps in ATOM feed are 1 hour early for some reason
@@ -55,7 +56,7 @@ class Scraper(object):
             'changed': changed
         })
 
-    def load_topic(self, tid, user):
+    def get_topic(self, tid, user):
         wc = WebClient(self.config, user)
         html = wc.get_topic(tid)
         return self.parse_topic(html)
@@ -89,7 +90,7 @@ class Scraper(object):
     def parse_category(self, c):
         href = c.get('href').strip('./')
 
-        if href == 'index.php': # Root category
+        if href == 'index.php':     # Root category
             return dict({
                 'id': 0,
                 'title': u'Все разделы',
@@ -107,3 +108,53 @@ class Scraper(object):
             'is_subforum': param == 'f',
         })
 
+
+    def get_torrent(self, id, user):
+        wc = WebClient(self.config, user)
+        bindata = wc.get_torrent(id)
+        user.downloads_today += 1
+
+        try:
+            parsed = bencode.bdecode(bindata)
+        except bencode.BTL.BTFailure as e:
+            _logger.error("Failed to decode torrent %d: %s", id, str(e))
+            if self.config.DEBUG:
+                save_debug_file('{}-failed.torrent'.format(id), bindata)
+            raise TopicException(str(e))
+
+        return self.process_torrent(parsed)
+
+    def process_torrent(self, parsed):
+        '''remove announce urls with user passkey'''
+        parsed.pop('announce', None)
+        annlist = parsed['announce-list']
+        parsed['announce-list'] = filter(lambda a: '?uk=' not in a[0], annlist)
+
+        return bencode.bencode(parsed)
+
+    def get_category_ids(self, user):
+        wc = WebClient(self.config, user)
+        html = wc.get_category_map()
+        return self.parse_category_map(html)
+
+    def parse_category_map(self, html):
+        parser = etree.HTMLParser(encoding='utf-8')
+        tree = etree.fromstring(html, parser=parser)
+        rootdiv = tree.xpath('//div[@id="f-map"]')
+
+        links = rootdiv[0].xpath('//*/a')
+        hrefs = [l.attrib.get('href') for l in links if l.attrib.get('href')]
+        ids = [int(h) for h in hrefs if h.isdigit()]
+        return ids
+
+    def parse_forum_page(self, html):
+        parser = etree.HTMLParser(encoding='utf-8')
+        tree = etree.fromstring(html, parser=parser)
+        links = tree.xpath('//*[@class="nav nav-top w100 pad_2"]/a')
+        return links
+
+    def get_forum_categories(self, id, user):
+        wc = WebClient(self.config, user)
+        html = wc.get_forum_page(id)
+        links = self.parse_forum_page(html)
+        return self.parse_categories(links)

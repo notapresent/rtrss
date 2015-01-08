@@ -3,7 +3,7 @@ All database interactions are performed by Manager
 
 """
 import logging
-from sqlalchemy import or_
+# from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
@@ -15,7 +15,6 @@ from . import TopicException, OperationInterruptedException
 KEEP_TORRENTS = 50
 
 _logger = logging.getLogger(__name__)
-
 
 
 class Manager(object):
@@ -31,23 +30,18 @@ class Manager(object):
         latest = scraper.get_latest_topics()
         existing = self.load_topics(latest.keys())
         new = self.new_topics(latest, existing)
-
-        user = self.select_user()
         torrents_added = 0
+        user = self.select_user()
+        self.db.add(user)
 
         for id, topic in new.items():
             try:
                 torrents_added += self.process_topic(id, topic, user)
-                self.db.commit()
-            except TopicException as e:
+            except TopicException:
                 pass
+            self.db.commit()
 
-
-
-        if torrents_added:
-            _logger.info('%d torrents added', torrents_added)
-        else:
-            _logger.debug('No torrents added')
+        _logger.info('%d torrents added', torrents_added)
 
         self.invalidate_cache()
 
@@ -55,7 +49,9 @@ class Manager(object):
         _logger.info('Cleanup')
 
     def daily_reset(self):
-        _logger.info('Daily reset')
+        '''Reset user download counters'''
+        self.db.query(User).update({User.downloads_today: 0})
+        _logger.info('Daily reset finished')
 
     def load_topics(self, ids):
         '''
@@ -85,7 +81,6 @@ class Manager(object):
                 result[id]['new'] = False
                 result[id]['old_infohash'] = existing[id]
 
-
         return result
 
     def process_topic(self, id, tdict, user):
@@ -94,7 +89,7 @@ class Manager(object):
         or updated, 0 otherwise
         '''
         scraper = Scraper(self.config)
-        parsed = scraper.load_topic(id, user)
+        parsed = scraper.get_topic(id, user)
 
         title = tdict['title']
         dt = tdict['updated_at']
@@ -191,7 +186,6 @@ class Manager(object):
             self.changed_categories.remove(cid)
             # TODO do actual invalidation here
 
-
     def select_user(self):
         '''Select one random user with download slots available'''
         try:
@@ -199,11 +193,29 @@ class Manager(object):
                 filter(User.enabled.is_(True)).\
                 filter(User.downloads_limit > User.downloads_today).\
                 order_by(func.random()).limit(1).one()
-        except NoResultFound as e:
+        except NoResultFound:
             raise OperationInterruptedException('No active users found')
 
         return user
 
+    def import_categories(self):
+        '''Import all existing categories from tracker'''
+        old = new = 0
+        user = self.select_user()
+        s = Scraper(self.config)
+        for id in s.get_category_ids(user):
+            c = self.db.query(Category).get(id)
+            if c:
+                old += 1
+                continue
+            catlist = s.get_forum_categories(id, user)
+            if not catlist:
+                _logger.warn('Unable to get category list for forum %d', id)
+                continue
+            self.ensure_category(catlist.pop(), catlist)
+            new += 1
+            self.db.commit()
+        _logger.info("Category import completed, %d old, %d new", old, new)
 
 if __name__ == '__main__':
     from . import config

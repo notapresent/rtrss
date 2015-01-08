@@ -4,12 +4,14 @@ import requests
 import time
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 from .util import save_debug_file
-from . import OperationInterruptedException
+from . import OperationInterruptedException, CaptchaRequiredException
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
 TOPIC_URL = 'http://{host}/forum/viewtopic.php?t={topic_id}'
 TORRENT_URL = 'http://dl.{host}/forum/dl.php?t={topic_id}'
 LOGIN_URL = 'http://login.{host}/forum/login.php'
+MAP_URL = 'http://{host}/forum/index.php?map=1'
+SUBFORUM_URL = 'http://{host}/forum/viewforum.php?f={id}'
 
 # if this string is in server response then user is logged in
 LOGGED_IN_STR = u'Вы зашли как: &nbsp;<a href="./profile.php?mode='\
@@ -23,7 +25,9 @@ TORRENT_DOWNLOAD_DELAY = 5
 
 DL_LIMIT_MSG = u'Вы уже исчерпали суточный лимит скачиваний торрент-файлов'
 
-CAPTCHA_STR = u'<img src="http://static.{ho}/captcha/'
+CAPTCHA_STR = u'<img src="http://static.{host}/captcha/'
+
+MAINTENANCE_MSG = u'Форум временно отключен на профилактические работы'
 
 _logger = logging.getLogger(__name__)
 
@@ -39,36 +43,54 @@ class WebClient(object):
 
     def get_feed(self):
         url = FEED_URL.format(host=self.config.TRACKER_HOST, category_id=0)
-        return self.request(url, 'get').content
+        return self.request(url).content
 
-    def request(self, url, method, **kwargs):
+    def request(self, url, method='get', **kwargs):
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             _logger.warn('Request failed: %s', e)
-            raise OperationInterruptedException(e)
-        else:
-            return response
-        # TODO tracker maintenance should be handled here
+            raise OperationInterruptedException(str(e))
 
-    def html(self, url, method='get', auth_required=True, *args, **kwargs):
-        html = self.request(url, method, *args, **kwargs).text
-        time.sleep(PAGE_DOWNLOAD_DELAY)
+        contenttype = response.headers.get('content-type')
+        if 'text' in contenttype and MAINTENANCE_MSG in response.text:
+            raise OperationInterruptedException('Tracker maintenance')
 
-        if auth_required and not self.is_signed_in(html):
+        return response
+
+    def authorized_request(self, url, method='get', **kwargs):
+        response = self.request(url, method, **kwargs)
+
+        contenttype = response.headers.get('content-type')
+        if 'text' in contenttype and not self.is_signed_in(response.text):
             self.sign_in(self.user)
-            html = self.request(url, 'get').text
-            time.sleep(PAGE_DOWNLOAD_DELAY)
+            response = self.request(url, method, **kwargs)
 
-        return html
+        return response
 
     def get_topic(self, id):
         url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
-        return self.html(url)
+        time.sleep(PAGE_DOWNLOAD_DELAY)
+        return self.authorized_request(url).text
 
-    def load_torrentfile(self, id):
-        pass    # TODO
+    def get_torrent(self, id):
+        '''Download torrent file or raise an exception'''
+        url = TORRENT_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
+        cookies = {'bb_dl': str(id)}
+        response = self.authorized_request(url, 'post', cookies=cookies)
+
+        if 'application/x-bittorrent' in response.headers['content-type']:
+            time.sleep(TORRENT_DOWNLOAD_DELAY)
+            return response.content
+
+        # Something went wrong
+        if DL_LIMIT_MSG in response.text:
+            _logger.error('User %s exceeded download quota', self.user)
+            raise CaptchaRequiredException
+
+        _logger.error('Failed to download torrent %s (User:%s)', id, self.user)
+        raise OperationInterruptedException('Failed to download torrent')
 
     def is_signed_in(self, html):
         search_str = LOGGED_IN_STR.format(user_id=self.user.id,
@@ -80,7 +102,6 @@ class WebClient(object):
             self.session.cookies = cookiejar_from_dict(user.cookies)
         else:
             self.sign_in(user)
-            user.cookies = dict_from_cookiejar(self.session.cookies)
 
     def sign_in(self, user):
         login_url = LOGIN_URL.format(host=self.config.TRACKER_HOST)
@@ -88,10 +109,17 @@ class WebClient(object):
                     'login_password': user.password,
                     'login': '%C2%F5%EE%E4'}
 
-        html = self.html(login_url, 'post', data=postdata, auth_required=False)
+        time.sleep(PAGE_DOWNLOAD_DELAY)
+        html = self.request(login_url, 'post', data=postdata).text
 
         if self.is_signed_in(html):
             _logger.info('User %s signed in', self.user)
+            user.cookies = dict_from_cookiejar(self.session.cookies)
+
+        elif CAPTCHA_STR.format(host=self.config.TRACKER_HOST) in html:
+            _logger.error('Captcha request during user %s sign in', self.user)
+            raise CaptchaRequiredException
+
         else:
             message = "User {} failed to sign in".format(self.user)
 
@@ -101,8 +129,10 @@ class WebClient(object):
 
             raise OperationInterruptedException(message)
 
-# def download_torrentfile(self, tid, *args, **kwargs):
-#     tfile = self.request('GET', self.torrentfile_url % tid, **kwargs)
-#     if tfile:
-#         self.user.downloads_today += 1
-#     return tfile
+    def get_category_map(self):
+        url = MAP_URL.format(host=self.config.TRACKER_HOST)
+        return self.authorized_request(url).text
+
+    def get_forum_page(self, id):
+        url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=id)
+        return self.authorized_request(url).text

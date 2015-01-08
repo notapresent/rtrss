@@ -2,24 +2,28 @@
 import sys
 import time
 import logging
+from datetime import timedelta
 from schedule import Scheduler
 from . import config
 from . import OperationInterruptedException
 from .manager import Manager
-from .util import make_localtime
+from .util import make_localtime, time_to_closest_midnight
 from .database import session_scope
 
 # Feed update interval, minutes
-UPDATE_INTERVAL = 5
+UPDATE_INTERVAL = 10
 
 # Database cleanup interval, minutes
 CLEANUP_INTERVAL = 60
 
 # Perform daily mainenance at this time
-DAILY_MAINTENANCE_TIME = '00:05'
+DAILY_MAINTENANCE_TIME = '00:01'
 
 # Timeone for the DAILY_MAINTENANCE_TIME
 TZNAME = 'Europe/Moscow'
+
+# Do not run update when current time is that close to midnight, minutes
+SAFETY_WINDOW_SIZE = 15
 
 _logger = logging.getLogger(__name__)
 
@@ -42,12 +46,21 @@ class Worker(object):
             do(self.run_task, 'daily_reset')
 
     def run_task(self, task_name):
+        if task_name == 'update' and self.is_safety_window():
+            _logger.debug('Safety window, skipping update')
+            return
+
         with session_scope() as session:
             manager = Manager(self.config, session)
             try:
                 getattr(manager, task_name)()
             except OperationInterruptedException:
                 pass
+
+    def is_safety_window(self):
+        win = timedelta(minutes=SAFETY_WINDOW_SIZE)
+        time_to_midnight = time_to_closest_midnight(TZNAME)
+        return time_to_midnight < win
 
     def run(self):
         _logger.info('Worker started')
