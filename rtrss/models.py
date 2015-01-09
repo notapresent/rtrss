@@ -23,21 +23,6 @@ class Category(Base):
         return u"<Category(id={}, title='{}')>".format(self.id, self.title)
 
 
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), nullable=False)
-    password = Column(String(20), nullable=False)
-    enabled = Column(Boolean, nullable=False, default=True)
-    downloads_limit = Column(Integer, default=100)
-    downloads_today = Column(Integer, nullable=False, default=0)
-    cookies = Column(PickleType, default=dict())
-
-    def __repr__(self):
-        return u"<User(id={}, username='{}')>".format(self.id, self.username)
-
-
 class Topic(Base):
     __tablename__ = 'topics'
 
@@ -70,3 +55,18 @@ class Torrent(Base):
 
     def __repr__(self):
         return u"<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), nullable=False)
+    password = Column(String(20), nullable=False)
+    enabled = Column(Boolean, nullable=False, default=True)
+    downloads_limit = Column(Integer, default=100)
+    downloads_today = Column(Integer, nullable=False, default=0)
+    cookies = Column(PickleType, default=dict())
+
+    def __repr__(self):
+        return u"<User(id={}, username='{}')>".format(self.id, self.username)

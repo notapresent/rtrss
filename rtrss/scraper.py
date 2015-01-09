@@ -123,25 +123,36 @@ class Scraper(object):
     def get_torrent(self, id, user):
         wc = WebClient(self.config, user)
         bindata = wc.get_torrent(id)
-        user.downloads_today += 1
+        user.downloads_today += 1   # TODO move to manager... or not?
+        decoded = self.decode_torrent(bindata)
+        decoded = self.process_torrent(decoded)
+        return bencode.bencode(decoded)
 
+    def decode_torrent(self, bindata):
         try:
-            parsed = bencode.bdecode(bindata)
+            decoded = bencode.bdecode(bindata)
         except bencode.BTL.BTFailure as e:
             _logger.error("Failed to decode torrent %d: %s", id, str(e))
             if self.config.DEBUG:
                 save_debug_file('{}-failed.torrent'.format(id), bindata)
             raise TopicException(str(e))
 
-        return self.process_torrent(parsed)
+        return decoded
 
-    def process_torrent(self, parsed):
+    def process_torrent(self, decoded):
         '''remove announce urls with user passkey'''
-        parsed.pop('announce', None)
-        annlist = parsed['announce-list']
-        parsed['announce-list'] = filter(lambda a: '?uk=' not in a[0], annlist)
+        decoded.pop('announce', None)
+        annlst = decoded['announce-list']
+        decoded['announce-list'] = filter(lambda a: '?uk=' not in a[0], annlst)
+        return decoded
 
-        return bencode.bencode(parsed)
+    def parse_torrent(self, bindata):
+        decoded = self.decode_torrent(bindata)
+        result = {
+            'size': torrentsize(decoded['info']),
+            'infohash': infohash(decoded['info'])
+        }
+        return result
 
     def get_category_ids(self, user):
         '''Return list of ids for all categories found in tracker map'''
@@ -219,6 +230,7 @@ class Scraper(object):
 def infohash(info):
     '''Calculates torrent infohash from decoded info section'''
     return hashlib.sha1(bencode.bencode(info)).hexdigest()
+
 
 def torrentsize(info):
     '''Calculates torrent size from decoded info section'''

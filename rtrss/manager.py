@@ -10,6 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss import TopicException, OperationInterruptedException
+import rtrss.tfstorage as tfstorage
 
 # Per category
 KEEP_TORRENTS = 50
@@ -27,7 +28,6 @@ class Manager(object):
         _logger.debug('Starting update')
         torrents_added = 0
         user = self.select_user()
-        self.db.add(user)
 
         updlist = self.make_update_list()
 
@@ -108,6 +108,7 @@ class Manager(object):
         if not infohash:
             return 0
 
+        # Torrent new or changed
         if tdict['new'] or old_infohash != infohash:
             self.save_torrent(id, infohash, old_infohash)
             return 1
@@ -174,21 +175,36 @@ class Manager(object):
         self.db.add(category)
 
     def save_torrent(self, id, infohash, old_infohash=None):
+        scraper = Scraper()
+        user = self.select_user()
+        torrentfile = scraper.get_torrent(id, user)
+        parsed = scraper.parse_torrent(torrentfile)
+
+        if infohash != parsed['infohash']:
+            msg = 'Torrent {} hash mismatch: {}/{}'.format(id, infohash,
+                                                           parsed['infohash'])
+            _logger.error(msg)
+            raise TopicException(msg)
+
         t = self.db.query(Torrent).get(id)
 
         if t:
             t.infohash = infohash
-            t.tfsize = 0
-            t.size = 0
+            t.tfsize = len(torrentfile)
+            t.size = parsed['size']
         else:
             t = Torrent(
                 tid=id,
                 infohash=infohash,
-                size=0,
-                tfsize=0
+                size=parsed['size'],
+                tfsize=len(torrentfile)
             )
 
         self.db.add(t)
+        self.store_torrentfile(id, torrentfile)
+
+    def store_torrentfile(self, id, torrentfile):
+        tfstorage.put(str(id), torrentfile)
 
     def invalidate_cache(self):
         for cid in self.changed_categories:
@@ -205,6 +221,7 @@ class Manager(object):
         except NoResultFound:
             raise OperationInterruptedException('No active users found')
 
+        self.db.add(user)
         return user
 
     def import_categories(self):
@@ -236,7 +253,6 @@ class Manager(object):
         '''Add one torrent to every empty category.'''
         torrents_added = 0
         user = self.select_user()
-        self.db.add(user)
 
         categories = self.db.query(Category).outerjoin(Topic).\
             filter(Topic.id.is_(None)).\
