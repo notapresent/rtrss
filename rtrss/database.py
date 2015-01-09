@@ -31,16 +31,16 @@ def session_scope(SessionFactory=None):
 
 
 def init_db(conn=None):
-    from .models import Base
+    from rtrss.models import Base
     if conn is None:
-        from worker import engine as conn
+        from database import engine as conn
 
     Base.metadata.create_all(bind=conn)
 
 
 def clear_db(conn=None):
-    from .models import Base
+    from rtrss.models import Base
     if conn is None:
-        from worker import engine as conn
+        from database import engine as conn
 
     Base.metadata.drop_all(bind=conn)

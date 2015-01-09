@@ -26,15 +26,7 @@ def populate_categories():
 def import_categories():
     with session_scope(Session) as db:
         manager = Manager(config, db)
-    manager.import_categories()
-
-
-def initdb():
-    init_db(engine)
-
-def cleardb():
-    clear_db(engine)
-
+        manager.import_categories()
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == 'run':
@@ -48,10 +40,10 @@ def main():
         populate_categories()
 
     elif sys.argv[1] == 'initdb':
-        populate_categories()
+        init_db(engine)
 
     elif sys.argv[1] == 'cleardb':
-        populate_categories()
+        clear_db(engine)
 
     else:
         _logger.error("Invalid parameters: %s", sys.argv)
