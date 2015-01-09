@@ -7,9 +7,9 @@ import logging
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
-from .scraper import Scraper
-from .models import Topic, User, Category, Torrent
-from . import TopicException, OperationInterruptedException
+from rtrss.scraper import Scraper
+from rtrss.models import Topic, User, Category, Torrent
+from rtrss import TopicException, OperationInterruptedException
 
 # Per category
 KEEP_TORRENTS = 50
@@ -25,16 +25,13 @@ class Manager(object):
 
     def update(self):
         _logger.debug('Starting update')
-        scraper = Scraper(self.config)
-
-        latest = scraper.get_latest_topics()
-        existing = self.load_topics(latest.keys())
-        new = self.new_topics(latest, existing)
         torrents_added = 0
         user = self.select_user()
         self.db.add(user)
 
-        for id, topic in new.items():
+        updlist = self.make_update_list()
+
+        for id, topic in updlist.items():
             try:
                 torrents_added += self.process_topic(id, topic, user)
             except TopicException:
@@ -45,8 +42,16 @@ class Manager(object):
 
         self.invalidate_cache()
 
+    def make_update_list(self):
+        scraper = Scraper(self.config)
+        latest = scraper.get_latest_topics()
+        existing = self.load_topics(latest.keys())
+        return self.new_topics(latest, existing)
+
     def cleanup(self):
-        _logger.info('Cleanup')
+        removed = 0
+        # TODO
+        _logger.info('Cleanup finished, %d torrents removed', removed)
 
     def daily_reset(self):
         '''Reset user download counters'''
@@ -93,9 +98,9 @@ class Manager(object):
 
         title = tdict['title']
         dt = tdict['updated_at']
+        old_infohash = tdict.get('old_infohash')
         catlist = parsed['categories']
         infohash = parsed['infohash']
-        old_infohash = tdict.get('old_infohash')
 
         if tdict['new'] or (infohash and infohash != old_infohash):
             self.save_topic(id, title, catlist, dt)
@@ -113,16 +118,19 @@ class Manager(object):
         '''
         Insert or update topic and categories
         '''
+        topic = self.db.query(Topic).get(id)
+
         if categories:
             category = categories.pop()
             self.ensure_category(category, categories)
         else:
             category = None
-
-        topic = self.db.query(Topic).get(id)
+            action = 'Updating' if topic else 'Adding'
+            _logger.warn('%s topic without category: %d', action, id)
 
         if topic:
-            topic.category_id = category['id']
+            if category:
+                topic.category_id = category['id']
             topic.title = title
             topic.updated_at = updated_at
 
@@ -167,6 +175,7 @@ class Manager(object):
 
     def save_torrent(self, id, infohash, old_infohash=None):
         t = self.db.query(Torrent).get(id)
+
         if t:
             t.infohash = infohash
             t.tfsize = 0
@@ -203,22 +212,61 @@ class Manager(object):
         old = new = 0
         user = self.select_user()
         s = Scraper(self.config)
+
         for id in s.get_category_ids(user):
             c = self.db.query(Category).get(id)
+
             if c:
                 old += 1
                 continue
+
             catlist = s.get_forum_categories(id, user)
+
             if not catlist:
                 _logger.warn('Unable to get category list for forum %d', id)
                 continue
+
             self.ensure_category(catlist.pop(), catlist)
             new += 1
             self.db.commit()
+
         _logger.info("Category import completed, %d old, %d new", old, new)
 
+    def populate_categories(self):
+        '''Add one torrent to every empty category.'''
+        torrents_added = 0
+        user = self.select_user()
+        self.db.add(user)
+
+        categories = self.db.query(Category).outerjoin(Topic).\
+            filter(Topic.id.is_(None)).\
+            filter(Category.is_subforum).order_by(Category.id).all()
+        _logger.debug('Found %d empty categories', len(categories))
+
+        for cat in categories:
+            torrents_added += self.populate_category(user, cat.id)
+            self.db.commit()
+        _logger.info('Populated %d categories', torrents_added)
+
+    def populate_category(self, user, id):
+        scraper = Scraper(self.config)
+        torrents = scraper.find_torrents(user, id)
+
+        if not torrents:
+            _logger.debug('No torrents found in category %d', id)
+            return 0
+
+        tdict = torrents[0]
+        tdict['new'] = True
+        try:
+            added = self.process_topic(tdict['id'], tdict, user)
+        except TopicException:
+            added = 0
+
+        return added
+
 if __name__ == '__main__':
-    from . import config
+    from rtrss import config
     from database import Session
     import sys
 

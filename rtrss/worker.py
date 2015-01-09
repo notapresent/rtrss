@@ -1,96 +1,47 @@
 """Scheduler initialization and worker entry point"""
 import sys
-import time
 import logging
-from datetime import timedelta
-from schedule import Scheduler
-from . import config
-from . import OperationInterruptedException
-from .manager import Manager
-from .util import make_localtime, time_to_closest_midnight
-from .database import session_scope
-
-# Feed update interval, minutes
-UPDATE_INTERVAL = 10
-
-# Database cleanup interval, minutes
-CLEANUP_INTERVAL = 60
-
-# Perform daily mainenance at this time
-DAILY_MAINTENANCE_TIME = '00:01'
-
-# Timeone for the DAILY_MAINTENANCE_TIME
-TZNAME = 'Europe/Moscow'
-
-# Do not run update when current time is that close to midnight, minutes
-SAFETY_WINDOW_SIZE = 15
+from rtrss import config
+from rtrss.scheduler import Scheduler
+from rtrss.database import session_scope, Session
+from rtrss.manager import Manager
 
 _logger = logging.getLogger(__name__)
 
+logging.basicConfig(
+    level=config.LOGLEVEL, stream=sys.stdout,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
-class Worker(object):
-    def __init__(self, config):
-        self.config = config
-        self.scheduler = Scheduler()
-        self.setup_schedule()
+# Limit 3rd-party packages logging
+logging.getLogger('schedule').setLevel(logging.WARNING)
+logging.getLogger('requests').setLevel(logging.WARNING)
 
-    def setup_schedule(self):
-        self.scheduler.every(UPDATE_INTERVAL).minutes.\
-            do(self.run_task, 'update')
 
-        self.scheduler.every(CLEANUP_INTERVAL).minutes.\
-            do(self.run_task, 'cleanup')
+def populate_categories():
+    with session_scope(Session) as db:
+        manager = Manager(config, db)
+        manager.populate_categories()
 
-        localtime = make_localtime(DAILY_MAINTENANCE_TIME, TZNAME)
-        self.scheduler.every().day.at(localtime.strftime('%H:%M')).\
-            do(self.run_task, 'daily_reset')
 
-    def run_task(self, task_name):
-        if task_name == 'update' and self.is_safety_window():
-            _logger.debug('Safety window, skipping update')
-            return
-
-        with session_scope() as session:
-            manager = Manager(self.config, session)
-            try:
-                getattr(manager, task_name)()
-            except OperationInterruptedException:
-                pass
-
-    def is_safety_window(self):
-        win = timedelta(minutes=SAFETY_WINDOW_SIZE)
-        time_to_midnight = time_to_closest_midnight(TZNAME)
-        return time_to_midnight < win
-
-    def run(self):
-        _logger.info('Worker started')
-
-        try:
-            while True:
-                self.scheduler.run_pending()
-                delay = self.scheduler.idle_seconds
-
-                if delay < 0:
-                    delay = 0
-
-                time.sleep(delay)
-
-        except (KeyboardInterrupt, SystemExit):
-            _logger.info('Worker caught interrupt signal, exiting')
-            return 0
+def import_categories():
+    with session_scope(Session) as db:
+        manager = Manager(config, db)
+    manager.import_categories()
 
 
 def main():
-    logging.basicConfig(
-        level=config.LOGLEVEL, stream=sys.stdout,
-        format='%(asctime)s %(levelname)s %(name)s %(message)s')
+    if len(sys.argv) < 2 or sys.argv[1] == 'run':
+        scheduler = Scheduler(config)
+        return scheduler.run()
 
-    # Limit 3rd-party packages logging
-    logging.getLogger('schedule').setLevel(logging.WARNING)
-    logging.getLogger('requests').setLevel(logging.WARNING)
+    elif sys.argv[1] == 'import_categories':
+        import_categories()
 
-    worker = Worker(config)
-    return worker.run()
+    elif sys.argv[1] == 'populate_categories':
+        populate_categories()
+
+    else:
+        _logger.error("Invalid parameters: %s", sys.argv)
 
 if __name__ == '__main__':
     sys.exit(main())

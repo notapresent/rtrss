@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
-import requests
 import time
+import requests
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
-from .util import save_debug_file
-from . import OperationInterruptedException, CaptchaRequiredException
+from rtrss.util import save_debug_file
+from rtrss import OperationInterruptedException, CaptchaRequiredException
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
 TOPIC_URL = 'http://{host}/forum/viewtopic.php?t={topic_id}'
@@ -12,6 +12,8 @@ TORRENT_URL = 'http://dl.{host}/forum/dl.php?t={topic_id}'
 LOGIN_URL = 'http://login.{host}/forum/login.php'
 MAP_URL = 'http://{host}/forum/index.php?map=1'
 SUBFORUM_URL = 'http://{host}/forum/viewforum.php?f={id}'
+SEARCH_URL = 'http://{host}/forum/tracker.php?f={cid}'
+
 
 # if this string is in server response then user is logged in
 LOGGED_IN_STR = u'Вы зашли как: &nbsp;<a href="./profile.php?mode='\
@@ -22,6 +24,9 @@ PAGE_DOWNLOAD_DELAY = 0.5
 
 # Time between torrent file download requests (seconds)
 TORRENT_DOWNLOAD_DELAY = 5
+
+# Time between search requests (seconds)
+SEARCH_DELAY = 1.5
 
 DL_LIMIT_MSG = u'Вы уже исчерпали суточный лимит скачиваний торрент-файлов'
 
@@ -41,8 +46,8 @@ class WebClient(object):
         if user:
             self.set_user(user)
 
-    def get_feed(self):
-        url = FEED_URL.format(host=self.config.TRACKER_HOST, category_id=0)
+    def get_feed(self, cid=0):
+        url = FEED_URL.format(host=self.config.TRACKER_HOST, category_id=cid)
         return self.request(url).content
 
     def request(self, url, method='get', **kwargs):
@@ -136,3 +141,21 @@ class WebClient(object):
     def get_forum_page(self, id):
         url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=id)
         return self.authorized_request(url).text
+
+    def find_torrents(self, cid=None):
+        form_data = {
+            'prev_my': 0,
+            'prev_new': 0,
+            'prev_oop': 0,
+            'f[]': cid or -1,  # category id
+            'o': 1,         # sort field
+            's': 2,         # sort order ascending/descending
+            'tm': -1,       # timespan
+            'pn': '',       # author name
+            'nm': '',       # title
+            'oop': 1        # only open
+        }
+        url = SEARCH_URL.format(host=self.config.TRACKER_HOST, cid=cid or '')
+        response = self.authorized_request(url, 'post', data=form_data)
+        time.sleep(SEARCH_DELAY)
+        return response.text

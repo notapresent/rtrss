@@ -11,8 +11,11 @@ DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', _dev_datadir)
 
 TRACKER_HOST = 'rutracker.org'
 
+# Timeone for the tracker times
+TZNAME = 'Europe/Moscow'
+
+DEBUG = bool(os.environ.get('RTRSS_DEBUG', False))
+
 LOGLEVEL = logging.DEBUG
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'development key')
-
-DEBUG = bool(os.environ.get('RTRSS_DEBUG', False))

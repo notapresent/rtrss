@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
-    Boolean, BigInteger, DateTime
+    Boolean, BigInteger, DateTime, Index
 from sqlalchemy.orm import relationship, relation
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -17,7 +17,6 @@ class Category(Base):
     title = Column(String(500), nullable=False)
     is_subforum = Column(Boolean, nullable=False, default=True)
 
-    # parent = relationship("Category", backref=backref('subcategories'))
     parent = relation('Category', remote_side=[id])
 
     def __repr__(self):
@@ -52,15 +51,18 @@ class Topic(Base):
 
     def __repr__(self):
         return u"<Topic(id={}, title='{}')>".format(self.id, self.title)
-# TODO
+
+# TODO Tune
 # Index('ix_category_updated_at', Topic.category_id, Torrent.updated_at.desc())
+Index('ix_category', Topic.category_id)
+Index('ix_updated_at', Topic.updated_at.desc())
 
 
 class Torrent(Base):
     __tablename__ = 'torrents'
 
     tid = Column(Integer, ForeignKey('topics.id'), primary_key=True)
-    infohash = Column(String(40))
+    infohash = Column(String(40), index=True)
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
 
@@ -68,5 +70,3 @@ class Torrent(Base):
 
     def __repr__(self):
         return u"<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)
-# TODO
-# Index('idx_category_created', Torrent.category_id, Torrent.created.desc())
