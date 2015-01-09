@@ -83,7 +83,7 @@ sudo apt-get install -y postgresql postgresql-client
 
 echo "Updating postgresql settings"
 sudo sed -i 's/peer/trust/' /etc/postgresql/9.3/main/pg_hba.conf
-echo '\nhost all all 192.168.0.0/24 md5' | sudo tee --append /etc/postgresql/9.3/main/pg_hba.conf
+echo '\nhost all all 192.168.254.0/24 md5' | sudo tee --append /etc/postgresql/9.3/main/pg_hba.conf
 sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/9.3/main/postgresql.conf 
 sudo service postgresql restart
 
