@@ -7,6 +7,7 @@ from rtrss import OperationInterruptedException
 from rtrss import config
 
 _logger = logging.getLogger(__name__)
+
 engine = create_engine(config.SQLALCHEMY_DATABASE_URI,  client_encoding='utf8')
 Session = sessionmaker(bind=engine)
 
@@ -31,16 +32,12 @@ def session_scope(SessionFactory=None):
 
 
 def init_db(conn=None):
+    _logger.info('Initializing database')
     from rtrss.models import Base
-    if conn is None:
-        from database import engine as conn
-
     Base.metadata.create_all(bind=conn)
 
 
 def clear_db(conn=None):
+    _logger.info('Clearing database')    
     from rtrss.models import Base
-    if conn is None:
-        from database import engine as conn
-
     Base.metadata.drop_all(bind=conn)
