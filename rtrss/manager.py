@@ -194,7 +194,7 @@ class Manager(object):
             t.size = parsed['size']
         else:
             t = Torrent(
-                tid=id,
+                id=id,
                 infohash=infohash,
                 size=parsed['size'],
                 tfsize=len(torrentfile)

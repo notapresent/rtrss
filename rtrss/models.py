@@ -46,7 +46,7 @@ Index('ix_updated_at', Topic.updated_at.desc())
 class Torrent(Base):
     __tablename__ = 'torrents'
 
-    tid = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
     infohash = Column(String(40), index=True)
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
@@ -54,7 +54,7 @@ class Torrent(Base):
     # topic = relationship('Topic', uselist=False)
 
     def __repr__(self):
-        return u"<Torrent(tid={}, hash='{}')>".format(self.tid, self.infohash)
+        return u"<Torrent(id={}, hash='{}')>".format(self.id, self.infohash)
 
 
 class User(Base):
