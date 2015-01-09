@@ -3,7 +3,7 @@ import sys
 import logging
 from rtrss import config
 from rtrss.scheduler import Scheduler
-from rtrss.database import session_scope, Session
+from rtrss.database import clear_db, init_db, session_scope, engine, Session
 from rtrss.manager import Manager
 
 _logger = logging.getLogger(__name__)
@@ -29,6 +29,13 @@ def import_categories():
     manager.import_categories()
 
 
+def initdb():
+    init_db(engine)
+
+def cleardb():
+    clear_db(engine)
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == 'run':
         scheduler = Scheduler(config)
@@ -38,6 +45,12 @@ def main():
         import_categories()
 
     elif sys.argv[1] == 'populate_categories':
+        populate_categories()
+
+    elif sys.argv[1] == 'initdb':
+        populate_categories()
+
+    elif sys.argv[1] == 'cleardb':
         populate_categories()
 
     else:
