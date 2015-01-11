@@ -18,4 +18,10 @@ DEBUG = bool(os.environ.get('RTRSS_DEBUG', False))
 
 LOGLEVEL = logging.DEBUG
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'development key')
+SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
+
+# Settings for torrent file storage
+STORAGE_SETTINGS = {
+    'BUCKET_NAME': os.environ.get('RTRSS_GCS_BUCKET_NAME', 'rtrss-development-bucket'),
+    'CLIENT_CREDENTIALS': os.environ.get('RTRSS_GCS_CLIENT_CREDENTIALS'),
+}
