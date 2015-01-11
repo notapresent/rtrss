@@ -17,10 +17,10 @@ _logger = logging.getLogger(__name__)
 
 API_VERSION = 'v1'
 
+# chunk size for file downloads and uploads
 CHUNKSIZE = 1024*1024
 
 SCOPES = [
-#    'https://www.googleapis.com/auth/devstorage.full_control',     # TODO check if needed
     'https://www.googleapis.com/auth/devstorage.read_only',
     'https://www.googleapis.com/auth/devstorage.read_write',
 ]
@@ -81,7 +81,7 @@ class FileStorage(object):
     def put(self, key, contents):
         '''Put file into storage'''
         # The BytesIO object may be replaced with any io.Base instance.
-        media = http.MediaIoBaseUpload(io.BytesIO(contents), 'application/octet-stream')
+        media = http.MediaIoBaseUpload(io.BytesIO(contents), mimetype='application/octet-stream', chunksize=CHUNKSIZE)
         req = self.client.objects().insert(bucket=self.bucket_name, name=key, media_body=media)
         resp = req.execute()
 
