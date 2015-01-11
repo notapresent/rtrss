@@ -68,5 +68,13 @@ class User(Base):
     downloads_today = Column(Integer, nullable=False, default=0)
     cookies = Column(PickleType, default=dict())
 
+    def can_download(self):
+        '''Returns True if user can download torrent files'''
+        if not self.enabled:
+            return False
+        if self.downloads_limit and self.downloads_limit >= self.downloads_today:
+            return False
+        return True
+        
     def __repr__(self):
         return u"<User(id={}, username='{}')>".format(self.id, self.username)

@@ -38,6 +38,9 @@ class Manager(object):
             except TopicException:
                 pass
             self.db.commit()
+            if not user.can_download:
+                _logger.info('User %s reached download limit, changing', user)
+                user = self.select_user()
 #            if torrents_added:
 #                break
 
@@ -113,7 +116,7 @@ class Manager(object):
 
         # Torrent new or changed
         if tdict['new'] or old_infohash != infohash:
-            self.save_torrent(id, infohash, old_infohash)
+            self.save_torrent(id, user, infohash, old_infohash)
             return 1
 
         return 0
@@ -177,9 +180,8 @@ class Manager(object):
         _logger.info('Adding category %s', category)
         self.db.add(category)
 
-    def save_torrent(self, id, infohash, old_infohash=None):
+    def save_torrent(self, id, user, infohash, old_infohash=None):
         scraper = Scraper(self.config)
-        user = self.select_user()
         torrentfile = scraper.get_torrent(id, user)
         parsed = scraper.parse_torrent(torrentfile)
 
