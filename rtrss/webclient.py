@@ -70,6 +70,7 @@ class WebClient(object):
         contenttype = response.headers.get('content-type')
         if 'text' in contenttype and not self.is_signed_in(response.text):
             self.sign_in(self.user)
+            time.sleep(PAGE_DOWNLOAD_DELAY)
             response = self.request(url, method, **kwargs)
 
         return response
@@ -136,11 +137,14 @@ class WebClient(object):
 
     def get_category_map(self):
         url = MAP_URL.format(host=self.config.TRACKER_HOST)
+        time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
 
     def get_forum_page(self, id):
         url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=id)
-        return self.authorized_request(url).text
+        html = self.authorized_request(url).text
+        time.sleep(PAGE_DOWNLOAD_DELAY)
+        return html
 
     def find_torrents(self, cid=None):
         form_data = {
