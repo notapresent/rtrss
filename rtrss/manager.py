@@ -215,7 +215,7 @@ class Manager(object):
         else:
             self._storage = FileStorage(self.config)
             return self._storage
-        
+
     def store_torrentfile(self, id, torrentfile):
         # TODO add mimetype
         self.storage.put('{}.torrent'.format(id), torrentfile)
@@ -279,7 +279,7 @@ class Manager(object):
             self.db.commit()
 #            if torrents_added:
 #                break
-            
+
         _logger.info('Populated %d categories', torrents_added)
 
     def populate_category(self, user, id):
@@ -307,14 +307,13 @@ if __name__ == '__main__':
     logging.basicConfig(
         level=config.LOGLEVEL, stream=sys.stdout,
         format='%(asctime)s %(levelname)s %(name)s %(message)s')
-    # TODO add debug log file 
-    
+    # TODO add debug log file
+
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
-    
 
     m = Manager(config, Session())
     m.update()

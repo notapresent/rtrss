@@ -38,6 +38,6 @@ def init_db(conn=None):
 
 
 def clear_db(conn=None):
-    _logger.info('Clearing database')    
+    _logger.info('Clearing database')
     from rtrss.models import Base
     Base.metadata.drop_all(bind=conn)

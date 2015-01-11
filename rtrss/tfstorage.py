@@ -2,12 +2,8 @@
 File storage
 '''
 import logging
-import datetime
-import argparse
 import httplib2
-import os
 import io
-import sys
 import json
 from oauth2client import service_account
 from googleapiclient import discovery, http
@@ -27,6 +23,7 @@ SCOPES = [
 
 # credentials object is shared between all instances
 _credentials = None
+
 
 def _init_credentials(config_json):
     global _credentials
@@ -48,26 +45,26 @@ class FileStorage(object):
         if _credentials is None:
             _init_credentials(config.STORAGE_SETTINGS['CLIENT_CREDENTIALS'])
 
-
         httpclient = _credentials.authorize(httplib2.Http())
 
-        # Construct the service object for the interacting with the Cloud Storage API. 
+        # Construct the service object for interacting with the API
         # TODO make this lazy
         self.client = discovery.build('storage', API_VERSION, http=httpclient)
         # try to get our bucket
         self.client.buckets().get(bucket=self.bucket_name).execute()
-            
+
     def get(self, key):
         '''
         Get file from storage. Returns file contents of None if file not exists
         '''
         # Get Payload Data
-        req = self.client.objects().get_media(bucket=self.bucket_name, object=key)
+        req = self.client.objects().\
+            get_media(bucket=self.bucket_name, object=key)
+
         # The BytesIO object may be replaced with any io.Base instance.
         fh = io.BytesIO()
         downloader = http.MediaIoBaseDownload(fh, req, chunksize=CHUNKSIZE)
         done = False
-
         try:
             while not done:
                 status, done = downloader.next_chunk()
@@ -81,10 +78,17 @@ class FileStorage(object):
     def put(self, key, contents):
         '''Put file into storage'''
         # The BytesIO object may be replaced with any io.Base instance.
-        media = http.MediaIoBaseUpload(io.BytesIO(contents), mimetype='application/octet-stream', chunksize=CHUNKSIZE)
-        req = self.client.objects().insert(bucket=self.bucket_name, name=key, media_body=media)
-        resp = req.execute()
+        media = http.MediaIoBaseUpload(
+            io.BytesIO(contents),
+            mimetype='application/octet-stream',
+            chunksize=CHUNKSIZE
+        )
+        req = self.client.objects().\
+            insert(bucket=self.bucket_name, name=key, media_body=media)
+        req.execute()
 
     def delete(self, key):
         '''Delete file from storage'''
-        self.client.objects().delete(bucket=self.bucket_name, object=key).execute()
+        self.client.objects().\
+            delete(bucket=self.bucket_name, object=key).\
+            execute()

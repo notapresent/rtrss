@@ -30,6 +30,7 @@ def import_categories():
         manager = Manager(config, db)
         manager.import_categories()
 
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == 'run':
         scheduler = Scheduler(config)
