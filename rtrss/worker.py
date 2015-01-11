@@ -15,6 +15,8 @@ logging.basicConfig(
 # Limit 3rd-party packages logging
 logging.getLogger('schedule').setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
+logging.getLogger('googleapiclient').setLevel(logging.WARNING)
+logging.getLogger('oauth2client').setLevel(logging.WARNING)
 
 
 def populate_categories():

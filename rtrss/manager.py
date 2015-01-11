@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss import TopicException, OperationInterruptedException
-import rtrss.tfstorage as tfstorage
+from rtrss.tfstorage import FileStorage
 
 # Per category
 KEEP_TORRENTS = 50
@@ -20,6 +20,7 @@ _logger = logging.getLogger(__name__)
 
 class Manager(object):
     def __init__(self, config, dbsession):
+        self._storage = None
         self.config = config
         self.db = dbsession
         self.changed_categories = set()
@@ -37,6 +38,8 @@ class Manager(object):
             except TopicException:
                 pass
             self.db.commit()
+#            if torrents_added:
+#                break
 
         _logger.info('%d torrents added', torrents_added)
 
@@ -175,12 +178,12 @@ class Manager(object):
         self.db.add(category)
 
     def save_torrent(self, id, infohash, old_infohash=None):
-        scraper = Scraper()
+        scraper = Scraper(self.config)
         user = self.select_user()
         torrentfile = scraper.get_torrent(id, user)
         parsed = scraper.parse_torrent(torrentfile)
 
-        if infohash != parsed['infohash']:
+        if infohash.lower() != parsed['infohash'].lower():
             msg = 'Torrent {} hash mismatch: {}/{}'.format(id, infohash,
                                                            parsed['infohash'])
             _logger.error(msg)
@@ -203,8 +206,17 @@ class Manager(object):
         self.db.add(t)
         self.store_torrentfile(id, torrentfile)
 
+    @property
+    def storage(self):
+        if self._storage:
+            return self._storage
+        else:
+            self._storage = FileStorage(self.config)
+            return self._storage
+        
     def store_torrentfile(self, id, torrentfile):
-        tfstorage.put(str(id), torrentfile)
+        # TODO add mimetype
+        self.storage.put('{}.torrent'.format(id), torrentfile)
 
     def invalidate_cache(self):
         for cid in self.changed_categories:
@@ -225,19 +237,20 @@ class Manager(object):
         return user
 
     def import_categories(self):
-        '''Import all existing categories from tracker'''
+        '''Import all existing tracker categories into DB'''
+        _logger.info('Importing all categories from tracker')
         old = new = 0
         user = self.select_user()
-        s = Scraper(self.config)
+        scraper = Scraper(self.config)
 
-        for id in s.get_category_ids(user):
+        for id in scraper.get_category_ids(user):
             c = self.db.query(Category).get(id)
 
             if c:
                 old += 1
                 continue
 
-            catlist = s.get_forum_categories(id, user)
+            catlist = scraper.get_forum_categories(id, user)
 
             if not catlist:
                 _logger.warn('Unable to get category list for forum %d', id)
@@ -262,6 +275,9 @@ class Manager(object):
         for cat in categories:
             torrents_added += self.populate_category(user, cat.id)
             self.db.commit()
+#            if torrents_added:
+#                break
+            
         _logger.info('Populated %d categories', torrents_added)
 
     def populate_category(self, user, id):
@@ -289,10 +305,14 @@ if __name__ == '__main__':
     logging.basicConfig(
         level=config.LOGLEVEL, stream=sys.stdout,
         format='%(asctime)s %(levelname)s %(name)s %(message)s')
-
+    # TODO add debug log file 
+    
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
+    logging.getLogger('oauth2client').setLevel(logging.WARNING)
+    
 
     m = Manager(config, Session())
     m.update()

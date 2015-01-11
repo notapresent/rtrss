@@ -20,7 +20,7 @@ API_VERSION = 'v1'
 CHUNKSIZE = 1024*1024
 
 SCOPES = [
-    'https://www.googleapis.com/auth/devstorage.full_control',     # TODO check if needed
+#    'https://www.googleapis.com/auth/devstorage.full_control',     # TODO check if needed
     'https://www.googleapis.com/auth/devstorage.read_only',
     'https://www.googleapis.com/auth/devstorage.read_write',
 ]
@@ -71,8 +71,9 @@ class FileStorage(object):
         try:
             while not done:
                 status, done = downloader.next_chunk()
-        except HttpError:
+        except HttpError as e:
             content = None
+            _logger.warn('get error: %s', e)
         else:
             content = fh.getvalue()     # TODO return bytes, not str?
         return content

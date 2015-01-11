@@ -142,9 +142,8 @@ class WebClient(object):
 
     def get_forum_page(self, id):
         url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=id)
-        html = self.authorized_request(url).text
         time.sleep(PAGE_DOWNLOAD_DELAY)
-        return html
+        return self.authorized_request(url).text
 
     def find_torrents(self, cid=None):
         form_data = {
@@ -160,6 +159,5 @@ class WebClient(object):
             'oop': 1        # only open
         }
         url = SEARCH_URL.format(host=self.config.TRACKER_HOST, cid=cid or '')
-        response = self.authorized_request(url, 'post', data=form_data)
         time.sleep(SEARCH_DELAY)
-        return response.text
+        return self.authorized_request(url, 'post', data=form_data).text
