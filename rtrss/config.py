@@ -16,7 +16,7 @@ TZNAME = 'Europe/Moscow'
 
 DEBUG = bool(os.environ.get('RTRSS_DEBUG', False))
 
-LOGLEVEL = logging.DEBUG
+LOGLEVEL = logging.INFO
 
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 
