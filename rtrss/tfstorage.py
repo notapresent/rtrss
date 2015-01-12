@@ -9,7 +9,6 @@ import time
 from oauth2client import service_account
 from googleapiclient import discovery, http
 from googleapiclient.errors import HttpError
-from functools import wraps
 
 _logger = logging.getLogger(__name__)
 
@@ -52,20 +51,19 @@ def retry_on_http_error(tries=NUM_RETRIES, delay=RETRY_DELAY):
                 try:
                     return f(*args, **kwargs)
                 except HttpError as err:
-                    # Reraise if non-retryable error 
+                    # Reraise if non-retryable error
                     if err.resp.status not in [403, 500, 503]:
                         raise
-                        
+
                     _logger.warn("Retrying in %.2f seconds ...", delay)
                     time.sleep(delay)
                     mtries -= 1
-                    
+
             # Only one last try left
             return f(*args, **kwargs)
         return wrapped_f
-    return wrap    
+    return wrap
 
-    
 
 class FileStorage(object):
     def __init__(self, config):
@@ -75,7 +73,7 @@ class FileStorage(object):
 
         if _credentials is None:
             _init_credentials(config.STORAGE_SETTINGS['CLIENT_CREDENTIALS'])
-        
+
     @property
     def client(self):
         if self._client:
@@ -89,7 +87,7 @@ class FileStorage(object):
     def ensure_bucket(self, bucket_name):
         '''Ensure storage bucket exists'''
         self.client.buckets().get(bucket=bucket_name).execute()
-        
+
     @retry_on_http_error()
     def get(self, key):
         '''
@@ -107,7 +105,7 @@ class FileStorage(object):
             while not done:
                 status, done = downloader.next_chunk()
         except HttpError as err:
-            # Return None if object not found 
+            # Return None if object not found
             if err.resp.status == 404:
                 content = None
                 _logger.warn('Object not found: %s', err)
@@ -116,7 +114,7 @@ class FileStorage(object):
         else:
             content = fh.getvalue()     # TODO return bytes, not str?
         return content
-    
+
     @retry_on_http_error()
     def put(self, key, contents):
         '''Put file into storage'''
@@ -129,25 +127,10 @@ class FileStorage(object):
         req = self.client.objects().\
             insert(bucket=self.bucket_name, name=key, media_body=media)
         req.execute()
-    
+
     @retry_on_http_error()
     def delete(self, key):
         '''Delete file from storage'''
         self.client.objects().\
             delete(bucket=self.bucket_name, object=key).\
             execute()
-    
-    
-#    def request(self, request):
-#        try:
-#            return request.execute()
-#
-#        except HttpError as err:
-#            # If the error is a rate limit or connection error, wait and retry
-#            if err.resp.status in [403, 500, 503]:
-#                time.sleep(5)
-#            else:
-#                raise
-#
-#    if err.resp.get('content-type', '').startswith('application/json'):
-#        reason = json.loads(e.content).reason            

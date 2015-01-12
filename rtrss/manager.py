@@ -299,6 +299,7 @@ class Manager(object):
 
         return added
 
+
 if __name__ == '__main__':
     from rtrss import config
     from database import Session
