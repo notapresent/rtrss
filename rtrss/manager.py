@@ -41,8 +41,6 @@ class Manager(object):
             if not user.can_download:
                 _logger.info('User %s reached download limit, changing', user)
                 user = self.select_user()
-#            if torrents_added:
-#                break
 
         _logger.info('%d torrents added', torrents_added)
 
@@ -68,8 +66,10 @@ class Manager(object):
         '''
         Loads existing topics from database, returns dict(topic_id: infohash)
         '''
-        existing = self.db.query(Topic).options(joinedload(Topic.torrent)).\
-            filter(Topic.id.in_(ids)).all()
+        existing = self.db.query(Topic)\
+            .options(joinedload(Topic.torrent))\
+            .filter(Topic.id.in_(ids))\
+            .all()
         result = dict()
         for t in existing:
             result[t.id] = t.torrent.infohash if t.torrent else None
@@ -228,10 +228,10 @@ class Manager(object):
     def select_user(self):
         '''Select one random user with download slots available'''
         try:
-            user = self.db.query(User).\
-                filter(User.enabled.is_(True)).\
-                filter(User.downloads_limit > User.downloads_today).\
-                order_by(func.random()).limit(1).one()
+            user = self.db.query(User)\
+                .filter(User.enabled.is_(True))\
+                .filter(User.downloads_limit > User.downloads_today)\
+                .order_by(func.random()).limit(1).one()
         except NoResultFound:
             raise OperationInterruptedException('No active users found')
 
@@ -269,16 +269,16 @@ class Manager(object):
         torrents_added = 0
         user = self.select_user()
 
-        categories = self.db.query(Category).outerjoin(Topic).\
-            filter(Topic.id.is_(None)).\
-            filter(Category.is_subforum).order_by(Category.id).all()
+        categories = self.db.query(Category).outerjoin(Topic)\
+            .filter(Topic.id.is_(None))\
+            .filter(Category.is_subforum)\
+            .order_by(Category.id)\
+            .all()
         _logger.debug('Found %d empty categories', len(categories))
 
         for cat in categories:
             torrents_added += self.populate_category(user, cat.id)
             self.db.commit()
-#            if torrents_added:
-#                break
 
         _logger.info('Populated %d categories', torrents_added)
 
@@ -307,7 +307,6 @@ if __name__ == '__main__':
     logging.basicConfig(
         level=config.LOGLEVEL, stream=sys.stdout,
         format='%(asctime)s %(levelname)s %(name)s %(message)s')
-    # TODO add debug log file
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
