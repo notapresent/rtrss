@@ -26,7 +26,8 @@ setup(
         'requests==2.5.1',
         'schedule==0.3.1',
         'tzlocal==1.1.2',
-        'bencode==1.0'
+        'bencode==1.0',
+        'google-api-python-client==1.3.1'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
