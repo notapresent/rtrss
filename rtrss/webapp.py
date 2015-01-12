@@ -3,7 +3,7 @@ from flask import Flask, send_from_directory, render_template
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config.from_object('rtr.config')
+app.config.from_object('rtrss.config')
 db = SQLAlchemy(app)
 
 
