@@ -27,7 +27,8 @@ setup(
         'schedule==0.3.1',
         'tzlocal==1.1.2',
         'bencode==1.0',
-        'google-api-python-client==1.3.1'
+        'google-api-python-client==1.3.1',
+        'SQLAlchemy==0.9.8'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

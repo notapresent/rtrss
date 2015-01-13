@@ -1,3 +1,4 @@
+SQLAlchemy==0.9.8
 Flask-SQLAlchemy==2.0
 lxml==3.4.1
 psycopg2==2.5.4
