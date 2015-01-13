@@ -22,6 +22,8 @@ def setup_logging():
     console_handler.setLevel(config.LOGLEVEL)
     console_handler.setFormatter(formatter)
     rootlogger.addHandler(console_handler)
+    _logger.info('Logging initialized with loglevel %s',
+                 logging.getLevelName(config.LOGLEVEL))
 
     # ... and debug handler if needed
     if config.DEBUG:
@@ -30,6 +32,7 @@ def setup_logging():
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         rootlogger.addHandler(file_handler)
+        _logger.info('Debug logging initialized')
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
@@ -54,12 +57,21 @@ def import_categories():
         manager.import_categories()
 
 
+def update_once():
+    with session_scope(Session) as db:
+        manager = Manager(config, db)
+        manager.update()
+
+
 def main():     # TODO argparse parameters
     setup_logging()
     retcode = 0
     if len(sys.argv) < 2 or sys.argv[1] == 'run':
         scheduler = Scheduler(config)
         retcode = scheduler.run()
+
+    elif sys.argv[1] == 'update':
+        update_once()
 
     elif sys.argv[1] == 'import_categories':
         import_categories()

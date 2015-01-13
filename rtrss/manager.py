@@ -298,22 +298,3 @@ class Manager(object):
             added = 0
 
         return added
-
-
-if __name__ == '__main__':
-    from rtrss import config
-    from database import Session
-    import sys
-
-    logging.basicConfig(
-        level=config.LOGLEVEL, stream=sys.stdout,
-        format='%(asctime)s %(levelname)s %(name)s %(message)s')
-
-    # Limit 3rd-party packages logging
-    logging.getLogger('schedule').setLevel(logging.WARNING)
-    logging.getLogger('requests').setLevel(logging.WARNING)
-    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
-    logging.getLogger('oauth2client').setLevel(logging.WARNING)
-
-    m = Manager(config, Session())
-    m.update()
