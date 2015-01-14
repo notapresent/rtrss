@@ -1,14 +1,14 @@
 import logging
 
-# logging.disable(logging.ERROR)
-logging.basicConfig(level=logging.DEBUG)
+logging.disable(logging.ERROR)
+# logging.basicConfig(level=logging.DEBUG)
 
+# TODO Move this somewhere
 DB_URL = 'postgresql://postgres:postgres@localhost/rtrss_test'
 
 
-class MockConfig(dict):
-    def __getattr__(self, name):
-        if name in self:
-            return self.get(name)
-        else:
-            raise ValueError('Config key {} not found'.format(name))
+class AttrDict(dict):
+    '''Class to make mock config objects'''
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self

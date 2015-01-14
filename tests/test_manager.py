@@ -1,5 +1,5 @@
 import unittest
-from . import MockConfig, DB_URL
+from . import AttrDict, DB_URL
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from rtrss.manager import Manager
@@ -23,7 +23,7 @@ class DBTestCase(unittest.TestCase):
 
 class ManagerTestCase(DBTestCase):
     def test_load_topics_returns_empty_(self):
-        cfg = MockConfig({'SQLALCHEMY_DATABASE_URI': DB_URL})
+        cfg = AttrDict({'SQLALCHEMY_DATABASE_URI': DB_URL})
         with session_scope(Session) as session:
             manager = Manager(cfg, session)
             self.assertEqual(manager.load_topics([-1]), dict())
