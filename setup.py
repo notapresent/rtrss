@@ -8,7 +8,7 @@ RSS feeds for popular bittorrent tracker
 from setuptools import setup
 
 with open('reqs/production.txt') as f:
-_requirements = f.read().splitlines()
+    _requirements = f.read().splitlines()
 
 setup(
     name='rtrss',

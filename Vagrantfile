@@ -79,6 +79,7 @@ sudo locale-gen ru_RU.UTF-8
 sudo dpkg-reconfigure locales
 
 echo "Installing postgresql"
+sudo apt-get update
 sudo apt-get install -y postgresql postgresql-client
 
 echo "Updating postgresql settings"
@@ -102,7 +103,7 @@ sudo -H pip install virtualenvwrapper
 echo 'source /usr/local/bin/virtualenvwrapper_lazy.sh' >> /home/vagrant/.bashrc 
 
 echo "Installing native package build requirements"
-sudo apt-get install -y build-essential postgresql-server-dev-9.3 python-dev libxml2-dev libxslt1-dev
+sudo apt-get install -y build-essential postgresql-server-dev-9.3 python-dev libxml2-dev libxslt1-dev libffi-dev
 
 SCRIPT
 
@@ -115,10 +116,10 @@ source /usr/local/bin/virtualenvwrapper_lazy.sh
 mkvirtualenv rtrss
 
 echo "Installing dependencies"
-pip install -r requirements.txt
+pip install -r reqs/production.txt
 
-echo "Installing dev dependencies"
-pip install -r requirements-dev.txt
+echo "Installing development dependencies"
+pip install -r reqs/development.txt
 
 SCRIPT
     
