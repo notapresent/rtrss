@@ -1,6 +1,7 @@
 import logging
 
-logging.disable(logging.ERROR)
+# logging.disable(logging.ERROR)
+logging.basicConfig(level=logging.DEBUG)
 
 DB_URL = 'postgresql://postgres:postgres@localhost/rtrss_test'
 
