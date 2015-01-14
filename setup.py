@@ -7,6 +7,8 @@ RSS feeds for popular bittorrent tracker
 """
 from setuptools import setup
 
+with open('reqs/production.txt') as f:
+_requirements = f.read().splitlines()
 
 setup(
     name='rtrss',
@@ -18,18 +20,7 @@ setup(
     long_description=__doc__,
     license='Apache 2.0',
     download_url='https://github.com/notapresent/rtrss/archive/master.zip',
-    install_requires=[
-        'SQLAlchemy==0.9.8',
-        'Flask-SQLAlchemy==2.0',
-        'lxml==3.4.1',
-        'psycopg2==2.5.4',
-        'python-dateutil==2.3',
-        'requests==2.5.1',
-        'schedule==0.3.1',
-        'tzlocal==1.1.2',
-        'bencode==1.0',
-        'google-api-python-client==1.3.1'
-    ],
+    install_requires=_requirements,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
