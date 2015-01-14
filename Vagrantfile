@@ -105,6 +105,10 @@ echo 'source /usr/local/bin/virtualenvwrapper_lazy.sh' >> /home/vagrant/.bashrc
 echo "Installing native package build requirements"
 sudo apt-get install -y build-essential postgresql-server-dev-9.3 python-dev libxml2-dev libxslt1-dev libffi-dev
 
+echo "Installing rhc client tools"
+sudo apt-get -y install ruby-full git-core
+sudo gem install rhc
+
 SCRIPT
 
 # Second provision script, must be run as `vagrant` user
