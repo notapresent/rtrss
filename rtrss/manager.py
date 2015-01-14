@@ -38,7 +38,7 @@ class Manager(object):
             except TopicException:
                 pass
             self.db.commit()
-            if not user.can_download:
+            if not user.can_download():
                 _logger.info('User %s reached download limit, changing', user)
                 user = self.select_user()
 
