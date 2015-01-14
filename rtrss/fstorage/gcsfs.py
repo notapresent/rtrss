@@ -5,11 +5,13 @@ import os
 import logging
 import httplib2
 import io
+import urlparse
 import requests
+import hashlib
 from oauth2client.client import GoogleCredentials
 from googleapiclient import discovery, http
 from googleapiclient.errors import HttpError
-from rtrss.httputil import retry_on_exception
+from rtrss.fstorage.httputil import retry_on_exception
 
 _logger = logging.getLogger(__name__)
 
@@ -29,28 +31,40 @@ _credentials = None
 @retry_on_exception()
 def download_and_save_keyfile(keyfile_url, keyfile_path):
     '''Download private key file and store it or raise an exception'''
+    if os.path.isfile(keyfile_path):    # Keyfile already saved
+        return
+
     json = requests.get(keyfile_url).text
     with open(keyfile_path, 'w') as fh:
         fh.write(json)
+    _logger.info('Keyfile saved to {}'.format(keyfile_path))
 
 
-def _init_credentials(keyfile_url, keyfile_path):
+def _init_credentials(keyfile_path):
+    '''Initialize credentials object'''
     global _credentials
-    download_and_save_keyfile(keyfile_url, keyfile_path)
     _credentials = GoogleCredentials.from_stream(keyfile_path)\
         .create_scoped(SCOPES)
     _logger.info('GCS storage credentials creatd')
 
 
-class FileStorage(object):
+def parse_fsurl(url):
+    '''Parse filestorage URL and return bucket name and optional prefix '''
+    parsed = urlparse.urlparse(url)
+    return (parsed.netloc, parsed.path.lstrip('/'))
+
+
+class GCSFileStorage(object):
     def __init__(self, config):
         self._client = None
-        self.config = config
-        self.bucket_name = config.STORAGE_SETTINGS['BUCKET_NAME']
+        self.bucket_name, self.prefix = parse_fsurl(config.FILESTORAGE_URL)
 
         if _credentials is None:
-            _init_credentials(config.STORAGE_SETTINGS['APIKEY_URL'],
-                              os.path.join(config.DATA_DIR, 'privatekey.json'))
+            urlhash = hashlib.md5(config.GCS_PRIVATEKEY_URL).hexdigest()
+            pkey_path = os.path.join(config.DATA_DIR,
+                                     '{}-privatekey.json'.format(urlhash))
+            download_and_save_keyfile(config.GCS_PRIVATEKEY_URL, pkey_path)
+            _init_credentials(pkey_path)
 
     @property
     def client(self):
@@ -65,12 +79,14 @@ class FileStorage(object):
                 http=httpclient
             )
             _logger.info('API servive client created')
+            self.ensure_bucket(self.bucket_name)
             return self._client
 
     @retry_on_exception()
     def ensure_bucket(self, bucket_name):
         '''Ensure storage bucket exists'''
         self.client.buckets().get(bucket=bucket_name).execute()
+        _logger.info('Bucket {} ready'.format(bucket_name))
 
     @retry_on_exception()
     def get(self, key):
@@ -79,7 +95,7 @@ class FileStorage(object):
         '''
         # Get Payload Data
         req = self.client.objects()\
-            .get_media(bucket=self.bucket_name, object=key)
+            .get_media(bucket=self.bucket_name, object=self.prefix + key)
 
         # The BytesIO object may be replaced with any io.Base instance.
         fh = io.BytesIO()
@@ -109,12 +125,13 @@ class FileStorage(object):
             chunksize=CHUNKSIZE
         )
         self.client.objects()\
-            .insert(bucket=self.bucket_name, name=key, media_body=media)\
+            .insert(bucket=self.bucket_name, name=self.prefix + key,
+                    media_body=media)\
             .execute()
 
     @retry_on_exception()
     def delete(self, key):
         '''Delete file from storage'''
         self.client.objects()\
-            .delete(bucket=self.bucket_name, object=key)\
+            .delete(bucket=self.bucket_name, object=self.prefix + key)\
             .execute()

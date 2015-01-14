@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss import TopicException, OperationInterruptedException
-from rtrss.tfstorage import FileStorage
+from rtrss.fstorage import make_storage
 
 # Per category
 KEEP_TORRENTS = 50
@@ -181,8 +181,11 @@ class Manager(object):
         self.db.add(category)
 
     def save_torrent(self, id, user, infohash, old_infohash=None):
+        # TODO this method needs refactoring
         scraper = Scraper(self.config)
         torrentfile = scraper.get_torrent(id, user)
+        user.downloads_today += 1
+
         parsed = scraper.parse_torrent(torrentfile)
 
         if infohash.lower() != parsed['infohash'].lower():
@@ -192,6 +195,8 @@ class Manager(object):
             raise TopicException(msg)
 
         t = self.db.query(Torrent).get(id)
+
+        # TODO find duplicates by infohash
 
         if t:
             t.infohash = infohash
@@ -213,7 +218,7 @@ class Manager(object):
         if self._storage:
             return self._storage
         else:
-            self._storage = FileStorage(self.config)
+            self._storage = make_storage(self.config)
             return self._storage
 
     def store_torrentfile(self, id, torrentfile):

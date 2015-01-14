@@ -47,7 +47,7 @@ class Torrent(Base):
     __tablename__ = 'torrents'
 
     id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
-    infohash = Column(String(40), index=True)
+    infohash = Column(String(40), index=True, unique=True)
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
 

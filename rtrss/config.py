@@ -6,23 +6,21 @@ _devdb = 'postgresql://postgres:postgres@localhost/rtrss_dev'
 SQLALCHEMY_DATABASE_URI = os.environ.get('OPENSHIFT_POSTGRESQL_DB_URL', _devdb)
 
 # directory to store runtime data, write access required
-_dev_datadir = os.path.join(os.environ.get('HOME'), 'data')
-DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', _dev_datadir)
+_projdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', os.path.join(_projdir, 'data'))
 
 TRACKER_HOST = 'rutracker.org'
 
 # Timeone for the tracker times
 TZNAME = 'Europe/Moscow'
 
-DEBUG = bool(os.environ.get('RTRSS_DEBUG', False))
+DEBUG = bool(os.environ.get('DEBUG', False))
 
 LOGLEVEL = logging.DEBUG
 
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 
 # Settings for torrent file storage
-STORAGE_SETTINGS = {
-    'BUCKET_NAME': os.environ.get('RTRSS_GCS_BUCKET_NAME',
-                                  'rtrss-development-bucket'),
-    'APIKEY_URL': os.environ.get('RTRSS_APIKEY_URL'),
-}
+_default_fsurl = 'file://{}'.format(os.path.join(DATA_DIR, 'torrents'))
+FILESTORAGE_URL = os.environ.get('RTRSS_FILESTORAGE_URL', _default_fsurl)
+GCS_PRIVATEKEY_URL = os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')

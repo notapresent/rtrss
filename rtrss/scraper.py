@@ -123,7 +123,6 @@ class Scraper(object):
     def get_torrent(self, id, user):
         wc = WebClient(self.config, user)
         bindata = wc.get_torrent(id)
-        user.downloads_today += 1   # TODO move to manager... or not?
         decoded = self.decode_torrent(bindata)
         decoded = self.process_torrent(decoded)
         return bencode.bencode(decoded)
