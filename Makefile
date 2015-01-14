@@ -3,11 +3,13 @@
 all: test
 
 test:
-	@python -m unittest discover
+	python -m unittest discover
 
-clean: clean-pyc
+clean: clean-pyc clean-data
 
 clean-pyc:
-	@find . -name '*.pyc' -exec rm {} \;
-	@find . -name '__pycache__' -type d | xargs rm -rf
+	find . -name '*.pyc' -exec rm {} \;
+	find . -name '__pycache__' -type d | xargs rm -rf
 
+clean-data:
+	rm -rf ./data/*
