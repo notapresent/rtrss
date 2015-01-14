@@ -5,7 +5,7 @@ Application settings:
 
 `RTRSS_SECRET_KEY` - secret key used by Flask to sign cookies. Set this to some random, hard to guess string.
 `RTRSS_FILESTORAGE_URL` - URL for torrent file storage. Supported schemes are `gs://` and `file://`. 
-* `file://` is used to store torrent files in local directory. With this scheme, you can use values of other environment variables like this: `file://{$ENVVAR_NAME}/torrents`.
+* `file://` is used to store torrent files in local directory. 
 * `gs://` scheme is used to store files in Google Cloud Storage: `gs://<Storage bucket id>/[prefix]`.  Prefix is optional.
     On Openshift default value is `file://{$OPENSHIFT_DATA_DIR}/torrents`, in local development environment it defaults to `file://<Project dir>/data/torrents`
 `RTRSS_GCS_PRIVATEKEY_URL` - If you use Google Cloud Storage to store torrent files, this must be set to location of private key file in JSON format.
