@@ -1,3 +1,18 @@
+Configuration
+=============
+
+Application settings: 
+
+`RTRSS_SECRET_KEY` - secret key used by Flask to sign cookies. Set this to some random, hard to guess string.
+`RTRSS_FILESTORAGE_URL` - URL for torrent file storage. Supported schemes are `gs://` and `file://`. 
+* `file://` is used to store torrent files in local directory. With this scheme, you can use values of other environment variables like this: `file://{$ENVVAR_NAME}/torrents`.
+* `gs://` scheme is used to store files in Google Cloud Storage: `gs://<Storage bucket id>/[prefix]`.  Prefix is optional.
+    On Openshift default value is `file://{$OPENSHIFT_DATA_DIR}/torrents`, in local development environment it defaults to `file://<Project dir>/data/torrents`
+`RTRSS_GCS_PRIVATEKEY_URL` - If you use Google Cloud Storage to store torrent files, this must be set to location of private key file in JSON format.
+
+Settings are stored in environment variables, default value is used if variable not set.
+
+
 Deployment 
 ==========
 
@@ -32,11 +47,11 @@ Production deployment on [Openshift](https://www.openshift.com/)
 
 ### Step-by-step guide:
 
-1. Clone application code: `git clone https://github.com/notapresent/rtrss.git`
-2. `cd rtrss`
-3. Choose a name: `export APP_NAME='<your app name here>'`
-4. Create openshift application: `rhc create-app --no-git --no-dns "$APP_NAME" python-2.7 postgresql-9.2`. Note `Git remote` url in command output. Add optional `--scaling` parameter to create scalable app.
-5. Pull in created repo  `git pull --strategy=ours --no-edit <Git remote url from previous step>`
-6. Set up configuration values: `rhc set-env --app $APP_NAME RTRSS_SECRET_KEY='<Secret key>' RTRSS_GCS_BUCKET_NAME='<Bucket name>' RTRSS_APIKEY_URL='<Private key URL>'`
-7. Push the code: `git push <Git remote url> master`. Sometimes this fails with message `The remote end hung up unexpectedly`, In this case just run the command again :)
-8. TODO...
+1. Choose a name: `export APP_NAME='<Your app name here>'`
+2. Create openshift application: `rhc create-app "$APP_NAME" python-2.7 postgresql-9.2`
+3. `cd $APP_NAME`
+4. `git remote add upstream -m master https://github.com/notapresent/rtrss.git`
+5. `git pull -s recursive -X theirs --no-edit upstream master`
+6. Set up configuration values: `rhc set-env RTRSS_SECRET_KEY='<Secret key>' RTRSS_FILESTORAGE_URL='<Storage URL>'`
+7. Push code to openshift: `git push`
+8. TODO
