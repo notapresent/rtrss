@@ -3,6 +3,7 @@ All database interactions are performed by Manager
 
 """
 import logging
+import os
 # from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
@@ -38,7 +39,7 @@ class Manager(object):
             except TopicException:
                 pass
             self.db.commit()
-            if not user.can_download():
+            if not user.can_download:
                 _logger.info('User %s reached download limit, changing', user)
                 user = self.select_user()
 
@@ -272,18 +273,33 @@ class Manager(object):
     def populate_categories(self):
         '''Add one torrent to every empty category.'''
         torrents_added = 0
+        cachefile = os.path.join(self.config.DATA_DIR, 'empty_cat_ids.txt')
+        if os.path.isfile(cachefile):
+            with open(cachefile) as f:
+                empty = [int(s) for s in f.read().splitlines()]
+        else:
+            empty = []
+
         user = self.select_user()
 
         categories = self.db.query(Category).outerjoin(Topic)\
             .filter(Topic.id.is_(None))\
             .filter(Category.is_subforum)\
+            .filter(not Category.id._in(empty))\
             .order_by(Category.id)\
             .all()
-        _logger.debug('Found %d empty categories', len(categories))
+        _logger.debug('Found %d underpopulated categories', len(categories))
 
         for cat in categories:
-            torrents_added += self.populate_category(user, cat.id)
+            added = self.populate_category(user, cat.id)
+            torrents_added += added
+            if not added:
+                empty.append(id)
             self.db.commit()
+
+        if not os.path.isfile(cachefile):
+            with open(cachefile, 'w') as f:
+                f.write('\n'.join([str(i) for i in empty]))
 
         _logger.info('Populated %d categories', torrents_added)
 
