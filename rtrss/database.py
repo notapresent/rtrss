@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
-from rtrss import OperationInterruptedException
+from rtrss.exceptions import OperationInterruptedException
 from rtrss import config
 
 _logger = logging.getLogger(__name__)
@@ -31,13 +31,13 @@ def session_scope(SessionFactory=None):
         session.close()
 
 
-def init_db(conn=None):
+def init_db():
     _logger.info('Initializing database')
     from rtrss.models import Base
-    Base.metadata.create_all(bind=conn)
+    Base.metadata.create_all(bind=engine)
 
 
-def clear_db(conn=None):
+def clear_db():
     _logger.info('Clearing database')
     from rtrss.models import Base
-    Base.metadata.drop_all(bind=conn)
+    Base.metadata.drop_all(bind=engine)
