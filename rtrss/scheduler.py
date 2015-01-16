@@ -58,15 +58,15 @@ class Scheduler(object):
         self.setup_schedule()
 
     def setup_schedule(self):
-        self._sched.every(UPDATE_INTERVAL).minutes.\
-            do(self.run_task, 'update')
+        self._sched.every(UPDATE_INTERVAL).minutes\
+            .do(self.run_task, 'update')
 
-        self._sched.every(CLEANUP_INTERVAL).minutes.\
-            do(self.run_task, 'cleanup')
+        self._sched.every(CLEANUP_INTERVAL).minutes\
+            .do(self.run_task, 'cleanup')
 
         localtime = make_localtime(DAILY_MAINTENANCE_TIME, self.config.TZNAME)
-        self._sched.every().day.at(localtime.strftime('%H:%M')).\
-            do(self.run_task, 'daily_reset')
+        self._sched.every().day.at(localtime.strftime('%H:%M'))\
+            .do(self.run_task, 'daily_reset')
 
     def run_task(self, task_name):
         if task_name == 'update' and self.is_safety_window():
