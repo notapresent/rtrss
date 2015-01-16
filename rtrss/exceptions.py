@@ -1,15 +1,16 @@
-'''All exceptions are defined in this module'''
+"""All exceptions are defined in this module"""
+
 
 class OperationInterruptedException(Exception):
-    '''Raised if unrecoverable error occured during any operation'''
+    """Raised if unrecoverable error occured during any operation"""
     pass
 
 
 class CaptchaRequiredException(Exception):
-    '''Raised if user exceeds torrent download quota'''
+    """Raised if user exceeds torrent download quota"""
     pass
 
 
 class TopicException(Exception):
-    '''Raised if error occured during topic processing'''
+    """Raised if error occurred during topic processing"""
     pass
