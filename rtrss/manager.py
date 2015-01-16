@@ -3,7 +3,6 @@ All database interactions are performed by Manager
 
 """
 import logging
-import os
 # from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
@@ -13,8 +12,9 @@ from rtrss.models import Topic, User, Category, Torrent
 from rtrss.exceptions import TopicException, OperationInterruptedException
 from rtrss.fstorage import make_storage
 
-# Per category
-KEEP_TORRENTS = 50
+# Minimum and maximum number of torrents to store, per category
+KEEP_TORRENTS_MIN = 25
+KEEP_TORRENTS_MAX = 75
 
 _logger = logging.getLogger(__name__)
 
@@ -182,7 +182,8 @@ class Manager(object):
         self.db.add(category)
 
     def save_torrent(self, id, user, infohash, old_infohash=None):
-        # TODO this method needs refactoring
+        # FIXME this method needs refactoring
+        # Increment download counter, download, decrement it if error
         scraper = Scraper(self.config)
         torrentfile = scraper.get_torrent(id, user)
         user.downloads_today += 1
@@ -270,52 +271,90 @@ class Manager(object):
 
         _logger.info("Category import completed, %d old, %d new", old, new)
 
-    def populate_categories(self):
-        '''Add one torrent to every empty category.'''
-        torrents_added = 0
-        cachefile = os.path.join(self.config.DATA_DIR, 'empty_cat_ids.txt')
-        if os.path.isfile(cachefile):
-            with open(cachefile) as f:
-                empty = [int(s) for s in f.read().splitlines()]
-        else:
-            empty = []
-
-        user = self.select_user()
-
-        categories = self.db.query(Category).outerjoin(Topic)\
-            .filter(Topic.id.is_(None))\
+    def populate_categories(self, count=1, total=None):
+        """
+        Add count (or less) torrents to every category with less then count
+        torrents, no more than total torrents
+        """
+        categories = self.db.query(Category, func.count(Torrent.id))\
+            .outerjoin(Topic)\
+            .outerjoin(Torrent)\
             .filter(Category.is_subforum)\
-            .filter(not Category.id._in(empty))\
+            .filter(Category.skip.isnot(True))\
+            .group_by(Category.id)\
+            .having(func.count(Torrent.id) < count)\
             .order_by(Category.id)\
             .all()
-        _logger.debug('Found %d underpopulated categories', len(categories))
 
-        for cat in categories:
-            added = self.populate_category(user, cat.id)
-            torrents_added += added
-            if not added:
-                empty.append(id)
+        _logger.debug(
+            'Found %d categories with less than %d torrents',
+            len(categories),
+            count
+        )
+
+        if not len(categories):
+            return
+
+        if total is None:
+            if count == 1:
+                total = len(categories)
+            else:
+                raise ValueError('total parameter is required if count > 1')
+
+        total_added = 0
+
+        for cat, ntorrents in categories:
+            # If this category has some torrents - only add missing amount
+            to_add = count if ntorrents == count else count - ntorrents
+
+            # Do not add more than total
+            if total_added + to_add > total:
+                to_add = total - total_added
+
+            num_added = self.populate_category(cat.id, to_add)
+            total_added += num_added
+            if not num_added:
+                cat.skip = True
             self.db.commit()
 
-        if not os.path.isfile(cachefile):
-            with open(cachefile, 'w') as f:
-                f.write('\n'.join([str(i) for i in empty]))
+            if total_added == total:
+                break
 
-        _logger.info('Populated %d categories', torrents_added)
+        _logger.info(
+            'Added %d torrents to %d categories',
+            total_added,
+            len(categories)
+        )
 
-    def populate_category(self, user, id):
+    def populate_category(self, category_id, count):
+        """Add count torrents from category category_id"""
         scraper = Scraper(self.config)
-        torrents = scraper.find_torrents(user, id)
+        user = self.select_user()
+        torrents = scraper.find_torrents(user, category_id)
+
+        added = 0
 
         if not torrents:
-            _logger.debug('No torrents found in category %d', id)
+            _logger.debug('No torrents found in category %d', category_id)
             return 0
 
-        tdict = torrents[0]
-        tdict['new'] = True
-        try:
-            added = self.process_topic(tdict['id'], tdict, user)
-        except TopicException:
-            added = 0
+        for tdict in torrents:
+            exists = self.db.query(Topic).get(tdict['id'])
+
+            # Skip torrents that are already in database
+            if exists:
+                continue
+
+            tdict['new'] = True
+            try:
+                added += self.process_topic(tdict['id'], tdict, user)
+            except TopicException:
+                _logger.debug('Failed to add topic %d', tdict['id'])
+
+            if not user.can_download():
+                user = self.select_user()
+
+            if added == count:
+                break
 
         return added
