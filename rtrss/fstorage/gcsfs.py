@@ -112,7 +112,7 @@ class GCSFileStorage(object):
             else:       # Some other error
                 raise
         else:
-            content = fh.getvalue()     # TODO return bytes, not str?
+            content = fh.getvalue()
         return content
 
     @retry_on_exception()
