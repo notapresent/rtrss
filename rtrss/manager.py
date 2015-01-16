@@ -10,7 +10,7 @@ from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
-from rtrss import TopicException, OperationInterruptedException
+from rtrss.exceptions import TopicException, OperationInterruptedException
 from rtrss.fstorage import make_storage
 
 # Per category

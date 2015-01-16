@@ -4,7 +4,8 @@ import time
 import requests
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 from rtrss.util import save_debug_file
-from rtrss import OperationInterruptedException, CaptchaRequiredException
+from rtrss.exceptions import (OperationInterruptedException, 
+                              CaptchaRequiredException)
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
 TOPIC_URL = 'http://{host}/forum/viewtopic.php?t={topic_id}'

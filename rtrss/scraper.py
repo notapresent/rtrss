@@ -6,7 +6,7 @@ import bencode
 from dateutil import parser as dateparser
 import pytz
 from lxml import etree
-from rtrss import TopicException
+from rtrss.exceptions import TopicException
 from rtrss.webclient import WebClient
 from rtrss.util import save_debug_file
 

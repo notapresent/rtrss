@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 import schedule
 import pytz
 import tzlocal
-from rtrss import OperationInterruptedException
+from rtrss.exceptions import OperationInterruptedException
 from rtrss.manager import Manager
 from rtrss.database import session_scope
 
