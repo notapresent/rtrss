@@ -12,7 +12,7 @@ Base = declarative_base()
 class Category(Base):
     __tablename__ = 'categories'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     parent_id = Column(Integer, ForeignKey('categories.id'))
     title = Column(String(500), nullable=False)
     is_subforum = Column(Boolean, nullable=False, default=True)
@@ -26,7 +26,7 @@ class Category(Base):
 class Topic(Base):
     __tablename__ = 'topics'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
     title = Column(String(500), nullable=False)
     updated_at = Column(DateTime, nullable=False)    # UTC
@@ -46,7 +46,7 @@ Index('ix_updated_at', Topic.updated_at.desc())
 class Torrent(Base):
     __tablename__ = 'torrents'
 
-    id = Column(Integer, ForeignKey('topics.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('topics.id'), primary_key=True, autoincrement=False)
     infohash = Column(String(40), index=True, unique=True)
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
@@ -60,7 +60,7 @@ class Torrent(Base):
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     username = Column(String(50), nullable=False)
     password = Column(String(20), nullable=False)
     enabled = Column(Boolean, nullable=False, default=True)
