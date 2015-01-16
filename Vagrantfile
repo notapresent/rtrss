@@ -117,7 +117,7 @@ $provision_nonroot = <<SCRIPT
 
 cd /vagrant
 source /usr/local/bin/virtualenvwrapper_lazy.sh
-mkvirtualenv rtrss
+mkvirtualenv rtrss -a /vagrant
 
 echo "Installing dependencies"
 pip install -r reqs/production.txt
