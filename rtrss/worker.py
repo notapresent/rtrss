@@ -32,12 +32,12 @@ def _set_signal_handlers():
 def _setup_logging():
     '''Initialize logging and add handlers'''
     LOG_FORMAT = '%(asctime)s %(process)d %(levelname)s %(name)s %(message)s'
-    
+
     rootlogger = logging.getLogger()
     rootlogger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(LOG_FORMAT)
 
-    # logging to stderr with maximum verbosity 
+    # logging to stderr with maximum verbosity
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
@@ -52,9 +52,9 @@ def _setup_logging():
     file_handler.setFormatter(formatter)
     file_handler.setLevel(config.LOGLEVEL)
     rootlogger.addHandler(file_handler)
-    _logger.info('Logging to %s with loglevel %s initialized', 
+    _logger.info('Logging to %s with loglevel %s initialized',
                  filename, logging.getLevelName(config.LOGLEVEL))
-    
+
     # TODO external logging service handler here
     # TODO warning & error notifications with SMTPHandler
 
@@ -74,7 +74,7 @@ def app_init():
 
 def app_teardown():
     _logger.info('Tearing down worker')
-    # Session().commit()        # TODO    
+    # Session().commit()        # TODO
     logging.shutdown()
 
 
@@ -112,7 +112,7 @@ def daemon_action(action):
     if action == 'status':
         print get_status(daemon)
         return 0
-    else:       
+    else:
         return getattr(daemon, action)()
 
 def make_argparser():
@@ -130,8 +130,7 @@ def make_argparser():
     wp.add_argument(
         'action',
         help='Action to perform',
-        choices=['run', 'update', 'import_categories', 
-                 'populate_categories']
+        choices=['run', 'update', 'import_categories', 'populate_categories']
     )
     wp.set_defaults(func=worker_action)
 
@@ -155,7 +154,7 @@ def make_argparser():
         choices=['init', 'clear']
     )
     dbp.set_defaults(func=db_action)
-    
+
     return parser
 
 
