@@ -63,12 +63,6 @@ def _setup_logging():
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
 
-
-def _shutdown_logging():
-    '''Shutdown logging. Must be called immediately before exit'''
-    _logger.info('Shutting down logging')
-    logging.shutdown()
-    
 # "Public" functions below this line
 
 def app_init():
@@ -81,7 +75,8 @@ def app_init():
 def app_teardown():
     _logger.info('Tearing down worker')
     # Session().commit()        # TODO    
-    _shutdown_logging()
+    logging.shutdown()
+
 
 
 def get_status(daemon):

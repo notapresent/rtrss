@@ -7,8 +7,11 @@ import time
 
 
 class BaseDaemon(daemonized.Daemonize):
-    def __init__(self, pidfile, lockfile, stdin=None, stdout=None, stderr=None):
+    def __init__(self, pidfile, lockfile=None, stdin=None, stdout=None, 
+                 stderr=None):
         self.pidfile = pidfile
+        if not lockfile:
+            lockfile = os.path.splitext(pidfile)[0] + '.lock'
         self._lock = filelock.FileLock(lockfile)
 
         dev_null = getattr(os, 'devnull', '/dev/null')
@@ -36,6 +39,10 @@ class BaseDaemon(daemonized.Daemonize):
             sys.exit(1)
 
         self.run()
+        
+        self._lock.release()
+        self.delpid()
+        
 
     def stop(self):
         if not self.is_running():
