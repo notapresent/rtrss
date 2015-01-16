@@ -1,8 +1,12 @@
 import logging
+
 from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
     Boolean, BigInteger, DateTime, Index
 from sqlalchemy.orm import relationship, relation
 from sqlalchemy.ext.declarative import declarative_base
+
+
+__all__ = ["Category", "Topic", "Torrent", "User"]
 
 _logger = logging.getLogger(__name__)
 
@@ -16,6 +20,8 @@ class Category(Base):
     parent_id = Column(Integer, ForeignKey('categories.id'))
     title = Column(String(500), nullable=False)
     is_subforum = Column(Boolean, nullable=False, default=True)
+    # Skip this category during initial categories population
+    skip = Column(Boolean, nullable=True)
 
     parent = relation('Category', remote_side=[id])
 
