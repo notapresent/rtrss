@@ -1,4 +1,4 @@
 import sys
-from rtrss.worker import main
+from worker import main
 
 sys.exit(main())
