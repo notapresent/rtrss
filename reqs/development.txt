@@ -1,2 +1,3 @@
 flake8==2.3.0
 gsutil==4.7
+ipython==2.3.1
