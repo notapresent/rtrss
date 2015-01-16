@@ -4,7 +4,7 @@ import errno
 import logging
 import urlparse
 import string
-import portalocker
+import portalocker      # TODO change this to filelock
 
 _logger = logging.getLogger(__name__)
 
