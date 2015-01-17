@@ -4,19 +4,19 @@ import errno
 import logging
 import urlparse
 import string
-import portalocker      # TODO change this to filelock
+import filelock
 
 _logger = logging.getLogger(__name__)
 
 
 def slugify(key):
-    '''Make a valud filename from arbitrary string'''
+    """Make a valid filename from arbitrary string"""
     valid_chars = set(string.letters + string.digits + '-_.()')
     return ''.join(c for c in key if c in valid_chars)
 
 
 def parse_fsurl(url):
-    '''Parse filestorage URL and return directory name'''
+    """Parse file storage URL and return directory name"""
     parsed = urlparse.urlparse(url)
     if parsed.netloc:       # Relative path
         modpath = abspath(dirname(__file__))
@@ -28,7 +28,9 @@ def parse_fsurl(url):
 
 
 def mkdir_p(path):
-    '''Make directory with all subdirectories'''
+    """Make directory with all subdirectories
+    :param path: directory to create
+    """
     try:
         os.makedirs(path)
     except OSError as exc:      # Python >2.5
@@ -51,17 +53,21 @@ class DirectoryFileStorage(object):
         return join(self._dir, slugify(key))
 
     def get(self, key):
-        with portalocker.Lock(self.full_path(key)) as fh:
-            content = fh.read()
-        return content
+        filename = self.full_path(key)
+        with filelock.FileLock(filename):
+            with open(filename) as file:
+                return file.read()
 
-    def put(self, key, content, _=None):
-        with portalocker.Lock(self.full_path(key)) as fh:
-            fh.write(content)
+    def put(self, key, content, mimetype=None):
+        _ = mimetype
+        filename = self.full_path(key)
+        with filelock.FileLock(filename):
+            with open(filename, 'w') as file:
+                file.write(content)
 
     def delete(self, key):
         filename = self.full_path(key)
-        with portalocker.Lock(filename):
+        with filelock.FileLock(filename):
             try:
                 os.unlink(filename)
             except OSError:
