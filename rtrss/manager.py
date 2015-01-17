@@ -3,6 +3,7 @@ All database interactions are performed by Manager
 
 """
 import logging
+import datetime
 # from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
@@ -55,18 +56,18 @@ class Manager(object):
 
     def cleanup(self):
         removed = 0
-        # TODO
+        # TODO Implement this
         _logger.info('Cleanup finished, %d torrents removed', removed)
 
     def daily_reset(self):
-        '''Reset user download counters'''
+        """Reset user download counters"""
         self.db.query(User).update({User.downloads_today: 0})
         _logger.info('Daily reset finished')
 
     def load_topics(self, ids):
-        '''
+        """
         Loads existing topics from database, returns dict(topic_id: infohash)
-        '''
+        """
         existing = self.db.query(Topic)\
             .options(joinedload(Topic.torrent))\
             .filter(Topic.id.in_(ids))\
@@ -96,10 +97,10 @@ class Manager(object):
         return result
 
     def process_topic(self, id, tdict, user):
-        '''
+        """
         Process topic, categories and torrent. Returns 1 if torrent was added
         or updated, 0 otherwise
-        '''
+        """
         scraper = Scraper(self.config)
         parsed = scraper.get_topic(id, user)
 
@@ -123,9 +124,9 @@ class Manager(object):
         return 0
 
     def save_topic(self, id, title, categories, updated_at):
-        '''
+        """
         Insert or update topic and categories
-        '''
+        """
         topic = self.db.query(Topic).get(id)
 
         if categories:
@@ -155,10 +156,10 @@ class Manager(object):
         return topic
 
     def ensure_category(self, cat, parents):
-        '''
+        """
         Check if category exists, create if not. Create all parent
         categories if needed.
-        '''
+        """
         category = self.db.query(Category).get(cat['id'])
 
         if category:
@@ -196,23 +197,31 @@ class Manager(object):
             _logger.error(msg)
             raise TopicException(msg)
 
-        t = self.db.query(Torrent).get(id)
+        torrent = self.db.query(Torrent) \
+            .filter(Torrent.infohash == infohash) \
+            .first()
 
-        # TODO find duplicates by infohash
+        if torrent:
+            msg = 'Torrent with infohash {} already exists: {}'.format(
+                infohash, torrent)
+            _logger.error(msg)
+            raise TopicException(msg)
 
-        if t:
-            t.infohash = infohash
-            t.tfsize = len(torrentfile)
-            t.size = parsed['size']
+        torrent = self.db.query(Torrent).get(id)
+
+        if torrent:
+            torrent.infohash = infohash
+            torrent.tfsize = len(torrentfile)
+            torrent.size = parsed['size']
         else:
-            t = Torrent(
+            torrent = Torrent(
                 id=id,
                 infohash=infohash,
                 size=parsed['size'],
                 tfsize=len(torrentfile)
             )
 
-        self.db.add(t)
+        self.db.add(torrent)
         self.store_torrentfile(id, torrentfile)
 
     @property
@@ -224,16 +233,18 @@ class Manager(object):
             return self._storage
 
     def store_torrentfile(self, id, torrentfile):
-        # TODO add mimetype
-        self.storage.put('{}.torrent'.format(id), torrentfile)
+        filename = '{}.torrent'.format(id)
+        self.storage.put(
+            filename,
+            torrentfile,
+            mimetype='application/x-bittorrent'
+        )
 
     def invalidate_cache(self):
-        for cid in self.changed_categories:
-            self.changed_categories.remove(cid)
-            # TODO do actual invalidation here
+        pass  # TODO implement this
 
     def select_user(self):
-        '''Select one random user with download slots available'''
+        """Select one random user with download slots available"""
         try:
             user = self.db.query(User)\
                 .filter(User.enabled.is_(True))\
@@ -246,7 +257,7 @@ class Manager(object):
         return user
 
     def import_categories(self):
-        '''Import all existing tracker categories into DB'''
+        """Import all existing tracker categories into DB"""
         _logger.info('Importing all categories from tracker')
         old = new = 0
         user = self.select_user()
@@ -348,6 +359,7 @@ class Manager(object):
             tdict['new'] = True
             try:
                 added += self.process_topic(tdict['id'], tdict, user)
+                self.db.commit()
             except TopicException:
                 _logger.debug('Failed to add topic %d', tdict['id'])
 
@@ -358,3 +370,36 @@ class Manager(object):
                 break
 
         return added
+
+    def estimate_free_download_slots(self, days=7):
+        """Calculates estimated download slots available based on number
+        of torrents, downloaded each day during past week
+        """
+        today = datetime.datetime.utcnow().date()
+        week = (datetime.datetime.utcnow() - datetime.timedelta(days)).date()
+        num_downloads = self.db.query(func.count(Torrent.id)) \
+            .join(Topic) \
+            .filter(func.date(Topic.updated_at) >= week) \
+            .filter(func.date(Topic.updated_at) < today) \
+            .scalar()
+
+        daily_slots = self.db.query(func.sum(User.downloads_limit)) \
+            .filter(User.enabled) \
+            .scalar()
+
+        slots_left_today = self.db.query(
+            func.sum(User.downloads_limit - User.downloads_today)) \
+            .filter(User.enabled) \
+            .scalar()
+
+        estimate = daily_slots - (num_downloads / days)
+
+        if estimate > slots_left_today:
+            estimate = slots_left_today
+
+        return int(estimate * 0.9)
+
+    def daily_populate_task(self):
+        dlslots = self.estimate_free_download_slots()
+        _logger.info("Going to download %d torrents", dlslots)
+        self.populate_categories(KEEP_TORRENTS_MIN, dlslots)

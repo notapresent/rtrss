@@ -4,12 +4,16 @@ Scheduler controls tasks execution
 import time
 import logging
 from datetime import datetime, date, timedelta
+
 import schedule
 import pytz
 import tzlocal
+
 from rtrss.exceptions import OperationInterruptedException
 from rtrss.manager import Manager
 from rtrss.database import session_scope
+
+
 
 # Feed update interval, minutes
 UPDATE_INTERVAL = 10
@@ -17,38 +21,45 @@ UPDATE_INTERVAL = 10
 # Database cleanup interval, minutes
 CLEANUP_INTERVAL = 60
 
-# Perform daily mainenance at this time
+# Perform daily maintenance at this time
 DAILY_MAINTENANCE_TIME = '00:01'
 
 # Do not run update when current time is that close to midnight, minutes
 SAFETY_WINDOW_SIZE = 15
 
-ONEDAY = timedelta(days=1)
+# Perform daily maintenance at this time
+DAILY_MAINTENANCE_TIME = '00:01'
+
+# Run "populate" task at this time
+DAILY_POPULATE_TIME = '05:00'
 
 _logger = logging.getLogger(__name__)
 
 
 def make_localtime(str_time, tzname, fmt='%H:%M'):
-    '''
-    Make local timezone-aware time from time and timezone strings
-    '''
+    """
+    Return local timezone-aware time from time and timezone strings
+    """
     today = date.today()
-    dt = datetime.combine(today, datetime.strptime(str_time, fmt).time())
+    timeobj = datetime.strptime(str_time, fmt).time()
+    dt = datetime.combine(today, timeobj)
     tracker_tz = pytz.timezone(tzname)
-    return tracker_tz.localize(dt).astimezone(tzlocal.get_localzone())
+    local_tz = tzlocal.get_localzone()
+    return tracker_tz.localize(dt).astimezone(local_tz)
 
 
 def time_to_closest_midnight(tzname):
+    one_day = timedelta(days=1)
     tz = pytz.timezone(tzname)
     utcnow = pytz.utc.localize(datetime.utcnow())
     localnow = utcnow.astimezone(tz)
     localmidnight = localnow.replace(hour=0, minute=0, second=0)
     delta = localnow - localmidnight
 
-    if delta < ONEDAY / 2:
+    if delta < one_day / 2:
         return delta
     else:
-        return ONEDAY - delta
+        return one_day - delta
 
 
 class Scheduler(object):
@@ -67,6 +78,10 @@ class Scheduler(object):
         localtime = make_localtime(DAILY_MAINTENANCE_TIME, self.config.TZNAME)
         self._sched.every().day.at(localtime.strftime('%H:%M'))\
             .do(self.run_task, 'daily_reset')
+
+        localtime = make_localtime(DAILY_POPULATE_TIME, self.config.TZNAME)
+        self._sched.every().day.at(localtime.strftime('%H:%M')) \
+            .do(self.run_task, 'daily_populate_task')
 
     def run_task(self, task_name):
         if task_name == 'update' and self.is_safety_window():
