@@ -1,5 +1,4 @@
 import logging
-
 from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
     Boolean, BigInteger, DateTime, Index
 from sqlalchemy.orm import relationship, relation
@@ -35,7 +34,8 @@ class Topic(Base):
     id = Column(Integer, primary_key=True, autoincrement=False)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
     title = Column(String(500), nullable=False)
-    updated_at = Column(DateTime, nullable=False)    # UTC
+    # 'Updated' value provided by the tracker, UTC
+    updated_at = Column(DateTime, nullable=False)
 
     category = relationship("Category", backref='topics')
     torrent = relationship('Torrent', uselist=False, backref='topic')
@@ -75,7 +75,7 @@ class User(Base):
     cookies = Column(PickleType, default=dict())
 
     def can_download(self):
-        '''Returns True if user can download torrent files'''
+        """Returns True if user can download torrent files"""
         if not self.enabled:
             return False
         if (self.downloads_limit and

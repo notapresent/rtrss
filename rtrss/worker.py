@@ -2,10 +2,7 @@
 import sys
 import os
 import logging
-import time
-import datetime
 import signal
-import atexit
 import argparse
 from rtrss import config
 from rtrss import scheduler
@@ -13,15 +10,25 @@ from rtrss import database
 from rtrss import manager
 from rtrss.daemon import make_daemon
 
+
+LOG_FORMAT = '%(asctime)s %(process)d %(levelname)s %(name)s %(message)s'
+
 _logger = logging.getLogger(__name__)
 
-_signalnames = dict((k, v) for v, k in sorted(signal.__dict__.items())
-     if v.startswith('SIG') and not v.startswith('SIG_'))
+
+def _make_signal_names_map():
+    return dict((k, v) for v, k in signal.__dict__.items()
+                if v.startswith('SIG') and not v.startswith('SIG_'))
+
+# Mapping signal number => signal name
+_SIGNAL_NAMES = _make_signal_names_map()
+
 
 def _signal_handler(signum, frame):
-    msg = 'Caught signal {} ({}), exiting'.format(_signalnames[signum], signum)
+    msg = 'Caught {} ({}), exiting'.format(_SIGNAL_NAMES[signum], signum)
     _logger.info(msg)
     sys.exit(0)
+
 
 def _set_signal_handlers():
     exits = [signal.SIGHUP, signal.SIGTERM, signal.SIGQUIT, signal.SIGINT]
@@ -30,9 +37,7 @@ def _set_signal_handlers():
 
 
 def _setup_logging():
-    '''Initialize logging and add handlers'''
-    LOG_FORMAT = '%(asctime)s %(process)d %(levelname)s %(name)s %(message)s'
-
+    """Initialize logging and add handlers"""
     rootlogger = logging.getLogger()
     rootlogger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(LOG_FORMAT)
@@ -44,10 +49,9 @@ def _setup_logging():
     rootlogger.addHandler(console_handler)
     _logger.info('Logging to stderr initialized')
 
-
-    #  logging to file
-    logdir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
-    filename = os.path.join(logdir, 'worker.log')
+    # logging to file
+    log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
+    filename = os.path.join(log_dir, 'worker.log')
     file_handler = logging.FileHandler(filename)
     file_handler.setFormatter(formatter)
     file_handler.setLevel(config.LOGLEVEL)
@@ -63,6 +67,7 @@ def _setup_logging():
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
 
+
 # "Public" functions below this line
 
 def app_init():
@@ -74,16 +79,16 @@ def app_init():
 
 def app_teardown():
     _logger.info('Tearing down worker')
-    # Session().commit()        # TODO
+    # commit everything
+    database.Session().commit()
     logging.shutdown()
 
 
-
 def get_status(daemon):
-    '''Return daemon status string'''
+    """Return daemon status string"""
     running = daemon.is_running()
     if running:
-        with open(daemon.pidfile,'r') as f:
+        with open(daemon.pidfile, 'r') as f:
             pid = f.read().strip()
         msg = "Daemon is running with pid {}".format(pid)
     else:
@@ -107,6 +112,7 @@ def db_action(action):
     elif action == 'init':
         database.init_db()
 
+
 def daemon_action(action):
     daemon = make_daemon(config)
     if action == 'status':
@@ -114,6 +120,7 @@ def daemon_action(action):
         return 0
     else:
         return getattr(daemon, action)()
+
 
 def make_argparser():
     # create the top-level parser
@@ -159,7 +166,7 @@ def make_argparser():
 
 
 def main():
-    '''Worker entry point'''
+    """Worker entry point"""
     args = make_argparser().parse_args()
     app_init()
     args.func(args.action)
