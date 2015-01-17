@@ -4,7 +4,7 @@ import time
 import requests
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 from rtrss.util import save_debug_file
-from rtrss.exceptions import (OperationInterruptedException, 
+from rtrss.exceptions import (OperationInterruptedException,
                               CaptchaRequiredException)
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
@@ -38,6 +38,18 @@ MAINTENANCE_MSG = u'Форум временно отключен на профи
 _logger = logging.getLogger(__name__)
 
 
+def is_text_responce(response):
+    return 'text' in response.headers.get('content-type', '')
+
+
+def detect_encoding(response):
+    cp1251 = '<meta charset="windows-1251">'
+    if is_text_responce(response) and cp1251 in response.content:
+        return 'windows-1251'
+    else:
+        return response.encoding
+
+
 class WebClient(object):
     def __init__(self, config, user=None):
         self.config = config
@@ -59,8 +71,14 @@ class WebClient(object):
             _logger.warn('Request failed: %s', e)
             raise OperationInterruptedException(str(e))
 
-        contenttype = response.headers.get('content-type')
-        if 'text' in contenttype and MAINTENANCE_MSG in response.text:
+        response.is_text = is_text_responce(response)
+
+        # Detect windows-1251 encoding
+        if response.is_text:
+            response.encoding = detect_encoding(response)
+
+        # TODO Make this work. Maintenance is at 04:40. Should work now
+        if response.is_text and MAINTENANCE_MSG in response.text:
             raise OperationInterruptedException('Tracker maintenance')
 
         return response
@@ -68,8 +86,7 @@ class WebClient(object):
     def authorized_request(self, url, method='get', **kwargs):
         response = self.request(url, method, **kwargs)
 
-        contenttype = response.headers.get('content-type')
-        if 'text' in contenttype and not self.is_signed_in(response.text):
+        if response.is_text and not self.is_signed_in(response.text):
             self.sign_in(self.user)
             time.sleep(PAGE_DOWNLOAD_DELAY)
             response = self.request(url, method, **kwargs)
@@ -80,6 +97,7 @@ class WebClient(object):
         url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
         time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
+
 
     def get_torrent(self, id):
         '''Download torrent file or raise an exception'''
@@ -117,7 +135,8 @@ class WebClient(object):
                     'login': '%C2%F5%EE%E4'}
 
         time.sleep(PAGE_DOWNLOAD_DELAY)
-        html = self.request(login_url, 'post', data=postdata).text
+        response = self.request(login_url, 'post', data=postdata)
+        html = response.text
 
         if self.is_signed_in(html):
             _logger.info('User %s signed in', self.user)
@@ -132,7 +151,7 @@ class WebClient(object):
 
             if self.config.DEBUG:
                 filename = 'user-signin-{}.html'.format(user.id)
-                save_debug_file(filename, html.encode('windows-1251'))
+                save_debug_file(filename, response.content)
 
             raise OperationInterruptedException(message)
 
@@ -162,3 +181,5 @@ class WebClient(object):
         url = SEARCH_URL.format(host=self.config.TRACKER_HOST, cid=cid or '')
         time.sleep(SEARCH_DELAY)
         return self.authorized_request(url, 'post', data=form_data).text
+
+
