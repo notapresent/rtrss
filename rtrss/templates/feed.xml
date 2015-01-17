@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>{{ channel.title }}</title>
+<description>{{ channel.description }}</description>
+<link>{{ channel.link }}</link>
+<lastBuildDate>{{ channel.lastBuildDate }}</lastBuildDate>
+
+{%- for item in items %}
+    <item>
+      <title>{{ item.title }}</title>
+      <link>{{ url_for('torrent', torrent_id=item.id, _external=True) }}</link>
+      <guid isPermaLink="false">{{ item.guid }}</guid>
+      <pubDate>{{ item.pubDate }}</pubDate>
+    </item>
+{%- endfor %}
+
+</channel>
+</rss>

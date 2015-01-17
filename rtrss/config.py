@@ -24,3 +24,5 @@ SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 _default_fsurl = 'file://{}'.format(os.path.join(DATA_DIR, 'torrents'))
 FILESTORAGE_URL = os.environ.get('RTRSS_FILESTORAGE_URL', _default_fsurl)
 GCS_PRIVATEKEY_URL = os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')
+
+SERVER_NAME = os.environ.get('OPENSHIFT_APP_DNS', 'localhost:8080')
