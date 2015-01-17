@@ -10,7 +10,8 @@ from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
-from rtrss.exceptions import TopicException, OperationInterruptedException
+from rtrss.exceptions import (TopicException, OperationInterruptedException,
+                              CaptchaRequiredException, TorrentFileException)
 from rtrss.fstorage import make_storage
 
 # Minimum and maximum number of torrents to store, per category
@@ -37,12 +38,21 @@ class Manager(object):
         for id, topic in updlist.items():
             try:
                 torrents_added += self.process_topic(id, topic, user)
+
             except TopicException:
                 pass
-            self.db.commit()
-            if not user.can_download:
+
+            except (CaptchaRequiredException, TorrentFileException):
+                user.downloads_today = user.downloads_limit
+                self.db.add(user)
+                _logger.debug('User %s - torrent dl failed', user)
+
+            if not user.can_download():
                 _logger.info('User %s reached download limit, changing', user)
+                user.downloads_today = user.downloads_limit
                 user = self.select_user()
+
+            self.db.commit()
 
         _logger.info('%d torrents added', torrents_added)
 
@@ -110,18 +120,18 @@ class Manager(object):
         catlist = parsed['categories']
         infohash = parsed['infohash']
 
+        # Save topic only if it is new or infohash changed (but not removed)
         if tdict['new'] or (infohash and infohash != old_infohash):
             self.save_topic(id, title, catlist, dt)
-
-        if not infohash:
-            return 0
+            result = 1
+        else:
+            result = 0
 
         # Torrent new or changed
         if tdict['new'] or old_infohash != infohash:
             self.save_torrent(id, user, infohash, old_infohash)
-            return 1
 
-        return 0
+        return result
 
     def save_topic(self, id, title, categories, updated_at):
         """
@@ -186,6 +196,7 @@ class Manager(object):
         # FIXME this method needs refactoring
         # Increment download counter, download, decrement it if error
         scraper = Scraper(self.config)
+
         torrentfile = scraper.get_torrent(id, user)
         user.downloads_today += 1
 
@@ -251,9 +262,10 @@ class Manager(object):
                 .filter(User.downloads_limit > User.downloads_today)\
                 .order_by(func.random()).limit(1).one()
         except NoResultFound:
+            self.db.commit()
             raise OperationInterruptedException('No active users found')
 
-        self.db.add(user)
+        _logger.debug("Selected user {}".format(user))
         return user
 
     def import_categories(self):

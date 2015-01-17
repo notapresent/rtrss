@@ -7,7 +7,7 @@ from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 
 from rtrss.util import save_debug_file
 from rtrss.exceptions import (OperationInterruptedException,
-                              CaptchaRequiredException)
+                              CaptchaRequiredException, TorrentFileException)
 
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
@@ -90,6 +90,9 @@ class WebClient(object):
         response = self.request(url, method, **kwargs)
 
         if response.is_text and not self.is_signed_in(response.text):
+            msg = '{} not signed in while requesting {}, retrying'.format(
+                self.user, url)
+            _logger.debug(msg)
             self.sign_in(self.user)
             time.sleep(PAGE_DOWNLOAD_DELAY)
             response = self.request(url, method, **kwargs)
@@ -119,14 +122,15 @@ class WebClient(object):
             _logger.error(msg)
             raise CaptchaRequiredException(msg)
 
-        msg = '{} failed to download torrent {}'.format(self.user, torrent_id)
+        msg = '{} failed to download torrent {} @ {}'.format(
+            self.user, torrent_id, url)
         _logger.error(msg)
 
         if self.config.DEBUG:
             filename = 'failed-torrent-{}.html'.format(torrent_id)
             save_debug_file(filename, response.content)
 
-        raise OperationInterruptedException(msg)
+        raise TorrentFileException(msg)
 
     def is_signed_in(self, html):
         search_str = LOGGED_IN_STR.format(user_id=self.user.id,
@@ -154,7 +158,7 @@ class WebClient(object):
             user.cookies = dict_from_cookiejar(self.session.cookies)
 
         elif CAPTCHA_STR.format(host=self.config.TRACKER_HOST) in html:
-            _logger.error('Captcha request during user %s sign in', self.user)
+            _logger.error('Captcha request during %s sign in', self.user)
             raise CaptchaRequiredException
 
         else:

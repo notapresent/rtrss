@@ -11,6 +11,11 @@ class CaptchaRequiredException(Exception):
     pass
 
 
+class TorrentFileException(Exception):
+    """Raised if user unable to download torrent"""
+    pass
+
+
 class TopicException(Exception):
     """Raised if error occurred during topic processing"""
     pass

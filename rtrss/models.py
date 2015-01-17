@@ -83,10 +83,13 @@ class User(Base):
         """Returns True if user can download torrent files"""
         if not self.enabled:
             return False
+        # If user has download limit and already reached it
         if (self.downloads_limit and
-                self.downloads_today < self.downloads_limit):
+                self.downloads_today >= self.downloads_limit):
             return False
+
         return True
 
     def __repr__(self):
-        return u"<User(id={}, username='{}')>".format(self.id, self.username)
+        return u"<User(id={}, username='{}' DL:{}/{})>".format(
+            self.id, self.username, self.downloads_today, self.downloads_limit)
