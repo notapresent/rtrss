@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+
 import requests
 from requests.utils import cookiejar_from_dict, dict_from_cookiejar
+
 from rtrss.util import save_debug_file
 from rtrss.exceptions import (OperationInterruptedException,
                               CaptchaRequiredException)
+
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
 TOPIC_URL = 'http://{host}/forum/viewtopic.php?t={topic_id}'
@@ -98,11 +101,12 @@ class WebClient(object):
         time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
 
+    def get_torrent(self, torrent_id):
+        """Download torrent file or raise an exception"""
+        url = TORRENT_URL.format(host=self.config.TRACKER_HOST,
+                                 topic_id=torrent_id)
 
-    def get_torrent(self, id):
-        '''Download torrent file or raise an exception'''
-        url = TORRENT_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
-        cookies = {'bb_dl': str(id)}
+        cookies = {'bb_dl': str(torrent_id)}
         response = self.authorized_request(url, 'post', cookies=cookies)
 
         if 'application/x-bittorrent' in response.headers['content-type']:
@@ -111,11 +115,18 @@ class WebClient(object):
 
         # Something went wrong
         if DL_LIMIT_MSG in response.text:
-            _logger.error('User %s exceeded download quota', self.user)
-            raise CaptchaRequiredException
+            msg = '{} exceeded download quota'.format(self.user)
+            _logger.error(msg)
+            raise CaptchaRequiredException(msg)
 
-        _logger.error('Failed to download torrent %s (User:%s)', id, self.user)
-        raise OperationInterruptedException('Failed to download torrent')
+        msg = '{} failed to download torrent {}'.format(self.user, torrent_id)
+        _logger.error(msg)
+
+        if self.config.DEBUG:
+            filename = 'failed-torrent-{}.html'.format(torrent_id)
+            save_debug_file(filename, response.content)
+
+        raise OperationInterruptedException(msg)
 
     def is_signed_in(self, html):
         search_str = LOGGED_IN_STR.format(user_id=self.user.id,
