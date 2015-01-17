@@ -127,6 +127,10 @@ class Manager(object):
         else:
             result = 0
 
+        # do not save torrent if no infohash
+        if not infohash:
+            return result
+
         # Torrent new or changed
         if tdict['new'] or old_infohash != infohash:
             self.save_torrent(id, user, infohash, old_infohash)
