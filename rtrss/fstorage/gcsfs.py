@@ -116,12 +116,12 @@ class GCSFileStorage(object):
         return content
 
     @retry_on_exception()
-    def put(self, key, contents):
+    def put(self, key, contents, mimetype='application/octet-stream'):
         '''Put file into storage, possibly overwriting it'''
         # The BytesIO object may be replaced with any io.Base instance.
         media = http.MediaIoBaseUpload(
             io.BytesIO(contents),
-            mimetype='application/octet-stream',
+            mimetype=mimetype,
             chunksize=CHUNKSIZE
         )
         self.client.objects()\

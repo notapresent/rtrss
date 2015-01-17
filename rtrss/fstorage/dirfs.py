@@ -55,7 +55,7 @@ class DirectoryFileStorage(object):
             content = fh.read()
         return content
 
-    def put(self, key, content):
+    def put(self, key, content, _=None):
         with portalocker.Lock(self.full_path(key)) as fh:
             fh.write(content)
 
