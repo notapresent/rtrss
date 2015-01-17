@@ -14,7 +14,6 @@ from rtrss.manager import Manager
 from rtrss.database import session_scope
 
 
-
 # Feed update interval, minutes
 UPDATE_INTERVAL = 10
 

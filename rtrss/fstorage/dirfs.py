@@ -58,8 +58,7 @@ class DirectoryFileStorage(object):
             with open(filename) as file:
                 return file.read()
 
-    def put(self, key, content, mimetype=None):
-        _ = mimetype
+    def put(self, key, content, mimetype=None):     # noqa
         filename = self.full_path(key)
         with filelock.FileLock(filename):
             with open(filename, 'w') as file:

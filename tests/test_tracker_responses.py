@@ -4,7 +4,7 @@ from tests import AttrDict
 from rtrss import scraper
 
 
-@unittest.skipIf(not os.environ.get('TEST_TRACKER_RESPOPNSES'), 
+@unittest.skipIf(not os.environ.get('TEST_TRACKER_RESPOPNSES'),
                  'Skipping tracker response tests by default')
 class TrackerResponseTestCase(unittest.TestCase):
     def test_latest_topics(self):

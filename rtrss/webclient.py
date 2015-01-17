@@ -192,5 +192,3 @@ class WebClient(object):
         url = SEARCH_URL.format(host=self.config.TRACKER_HOST, cid=cid or '')
         time.sleep(SEARCH_DELAY)
         return self.authorized_request(url, 'post', data=form_data).text
-
-

@@ -52,7 +52,12 @@ Index('ix_updated_at', Topic.updated_at.desc())
 class Torrent(Base):
     __tablename__ = 'torrents'
 
-    id = Column(Integer, ForeignKey('topics.id'), primary_key=True, autoincrement=False)
+    id = Column(
+        Integer,
+        ForeignKey('topics.id'),
+        primary_key=True,
+        autoincrement=False
+    )
     infohash = Column(String(40), index=True, unique=True)
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
