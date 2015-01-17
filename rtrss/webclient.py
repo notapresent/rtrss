@@ -93,6 +93,11 @@ class WebClient(object):
             msg = '{} not signed in while requesting {}, retrying'.format(
                 self.user, url)
             _logger.debug(msg)
+
+            if self.config.DEBUG:
+                filename = '{}-signin-retry.html'.format(self.user.id)
+                save_debug_file(filename, response.content)
+
             self.sign_in(self.user)
             time.sleep(PAGE_DOWNLOAD_DELAY)
             response = self.request(url, method, **kwargs)
@@ -120,6 +125,12 @@ class WebClient(object):
         if DL_LIMIT_MSG in response.text:
             msg = '{} exceeded download quota'.format(self.user)
             _logger.error(msg)
+
+            if self.config.DEBUG:
+                filename = '{}-quota-exceeded-{}.html'.format(
+                    self.user.id, torrent_id)
+                save_debug_file(filename, response.content)
+
             raise CaptchaRequiredException(msg)
 
         msg = '{} failed to download torrent {} @ {}'.format(
