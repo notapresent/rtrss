@@ -31,13 +31,21 @@ def session_scope(SessionFactory=None):
         session.close()
 
 
-def init_db():
+def init_db(eng=None):
     _logger.info('Initializing database')
+
+    if eng is None:
+        eng = engine
+
     from rtrss.models import Base
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=eng)
 
 
-def clear_db():
+def clear_db(eng=None):
     _logger.info('Clearing database')
+
+    if eng is None:
+        eng = engine
     from rtrss.models import Base
-    Base.metadata.drop_all(bind=engine)
+
+    Base.metadata.drop_all(bind=eng)
