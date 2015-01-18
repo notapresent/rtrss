@@ -8,7 +8,7 @@ from rtrss import config
 
 _logger = logging.getLogger(__name__)
 
-engine = create_engine(config.SQLALCHEMY_DATABASE_URI,  client_encoding='utf8')
+engine = create_engine(config.SQLALCHEMY_DATABASE_URI, client_encoding='utf8')
 Session = sessionmaker(bind=engine)
 
 
