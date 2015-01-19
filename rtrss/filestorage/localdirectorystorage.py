@@ -11,7 +11,7 @@ _logger = logging.getLogger(__name__)
 
 def slugify(key):
     """Make a valid filename from arbitrary string"""
-    valid_chars = set(string.letters + string.digits + '-_.()')
+    valid_chars = set(string.letters + string.digits + '-_.()/')
     return ''.join(c for c in key if c in valid_chars)
 
 
