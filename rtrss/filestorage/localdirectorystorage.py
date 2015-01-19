@@ -1,5 +1,5 @@
 import os
-from os.path import dirname, abspath, join
+import os.path as path
 import errno
 import logging
 import urlparse
@@ -19,10 +19,10 @@ def parse_fsurl(url):
     """Parse file storage URL and return directory name"""
     parsed = urlparse.urlparse(url)
     if parsed.netloc:       # Relative path
-        modpath = abspath(dirname(__file__))
-        projpath = abspath(join(modpath, os.pardir, os.pardir))
-        relpath = join(parsed.netloc, parsed.path.strip(os.sep))
-        return join(projpath, relpath)
+        modpath = path.abspath(path.dirname(__file__))
+        projpath = path.abspath(path.join(modpath, os.pardir, os.pardir))
+        relpath = path.join(parsed.netloc, parsed.path.strip(os.sep))
+        return path.join(projpath, relpath)
     else:
         return parsed.path.rstrip(os.sep)
 
@@ -39,6 +39,11 @@ def mkdir_p(path):
         else:
             raise
 
+def ensure_dir(dirname):
+    """Check if file directory exists, create if it doesn't"""
+    if not path.exists(dirname):
+        mkdir_p(dirname)
+
 
 class DirectoryFileStorage(object):
     def __init__(self, config):
@@ -50,23 +55,33 @@ class DirectoryFileStorage(object):
         _logger.info('Directory storage initialized in {}'.format(self._dir))
 
     def full_path(self, key):
-        return join(self._dir, slugify(key))
+        return path.join(self._dir, slugify(key))
+
+    def lockfilename(self, filename):
+        return filename + '.lock'
 
     def get(self, key):
         filename = self.full_path(key)
-        with filelock.FileLock(filename):
+        lockfilename = self.lockfilename(filename)
+        _logger.debug('Getting {} from {}'.format(key, filename))
+        with filelock.FileLock(lockfilename):
             with open(filename) as file:
                 return file.read()
 
     def put(self, key, content, mimetype=None):     # noqa
         filename = self.full_path(key)
-        with filelock.FileLock(filename):
+        lockfilename = self.lockfilename(filename)
+        ensure_dir(path.dirname(filename))
+        _logger.debug('Saving {} to {}'.format(key, filename))
+        with filelock.FileLock(lockfilename):
             with open(filename, 'w') as file:
                 file.write(content)
 
     def delete(self, key):
         filename = self.full_path(key)
-        with filelock.FileLock(filename):
+        lockfilename = self.lockfilename(filename)
+        _logger.debug('Deleting {}'.format(filename))
+        with filelock.FileLock(lockfilename):
             try:
                 os.unlink(filename)
             except OSError:

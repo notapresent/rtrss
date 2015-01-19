@@ -11,7 +11,7 @@ import hashlib
 from oauth2client.client import GoogleCredentials
 from googleapiclient import discovery, http
 from googleapiclient.errors import HttpError
-from rtrss.fstorage.httputil import retry_on_exception
+from rtrss.filestorage.httputil import retry_on_exception
 
 _logger = logging.getLogger(__name__)
 

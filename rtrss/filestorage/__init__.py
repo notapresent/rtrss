@@ -1,6 +1,6 @@
 '''File storage for torrent files, with several backends'''
 import urlparse
-from rtrss.fstorage import gcsfs, dirfs
+from rtrss.filestorage import googlecloudstorage, localdirectorystorage
 
 
 def make_storage(config):
@@ -9,10 +9,10 @@ def make_storage(config):
     parsed = urlparse.urlparse(uri)
 
     if parsed.scheme == 'gs':
-        return gcsfs.GCSFileStorage(config)
+        return googlecloudstorage.GCSFileStorage(config)
 
     elif parsed.scheme == 'file':
-        return dirfs.DirectoryFileStorage(config)
+        return localdirectorystorage.DirectoryFileStorage(config)
 
     else:
         raise ValueError('Invalid storage URL: {}'.format(uri))
