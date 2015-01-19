@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
     Boolean, BigInteger, DateTime, Index
 from sqlalchemy.orm import relationship, relation
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.schema import UniqueConstraint
 
 __all__ = ["Category", "Topic", "Torrent", "User"]
 
@@ -15,14 +15,22 @@ Base = declarative_base()
 class Category(Base):
     __tablename__ = 'categories'
 
-    id = Column(Integer, primary_key=True, autoincrement=False)
+    id = Column(Integer, primary_key=True)
+    tracker_id = Column(Integer, nullable=False)
+    is_subforum = Column(Boolean, nullable=False, default=True)
+
     parent_id = Column(Integer, ForeignKey('categories.id'))
     title = Column(String(500), nullable=False)
-    is_subforum = Column(Boolean, nullable=False, default=True)
+
     # Skip this category during initial categories population
     skip = Column(Boolean, nullable=True)
 
-    parent = relation('Category', remote_side=[id])
+    parent = relation('Category', remote_side=[id])     # TODO do we need this?
+
+    __table_args__ = (
+        UniqueConstraint(
+            'tracker_id', 'is_subforum'),       # , name='_tracker_id_uc'
+    )
 
     def __repr__(self):
         return u"<Category(id={}, title='{}')>".format(self.id, self.title)

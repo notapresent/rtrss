@@ -18,6 +18,8 @@ TRACKER_TIMEFIX = datetime.timedelta(hours=1)
 # This string in topic title marks updated torrents
 UPDATED_MARKER = u'[Обновлено]'
 
+# Section with this title contains private forums, we don't need
+PRIVATE_SECTION_TITLE = u'Приватные форумы'
 
 def make_tree(html, encoding='utf-8'):
     parser = etree.HTMLParser(encoding=encoding)
@@ -78,44 +80,48 @@ class Scraper(object):
     def parse_topic(self, html):
         tree = make_tree(html)
         hashspans = tree.xpath('//span[@id="tor-hash"]')
+        infohash = hashspans[0].text if hashspans else None
         # torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
         catlinks = tree.xpath('//*[@class="nav w100 pad_2"]/a')
 
+        if not catlinks:
+            raise ValueError()
+
         return dict({
-            'infohash': hashspans[0].text if hashspans else None,
+            'infohash': infohash,
             'categories': self.parse_categories(catlinks)
             # 'has_torrent': bool(torrentlinks)
         })
 
     def parse_categories(self, links):
-        result = list()
-        parent_id = None
+        """Maked list of parsed categories from list of etree.Elements"""
 
-        for link in links:
-            parsed = self.parse_category(link)
-            if parsed:
-                parsed['parent_id'] = parent_id
-                parent_id = parsed['id']
-                result.append(parsed)
+        result = [self.parse_category(link) for link in links]
+
+        if not result:
+            src = ''.join([etree.tostring(l) for l in links])
+            raise ValueError('Failed to parse categories: {}'.format(src))
+
         return result
 
     def parse_category(self, c):
-        href = c.get('href').strip('./')
+        href = c.get('href', '').strip('./')
 
         if href == 'index.php':     # Root category
             return dict({
-                'id': 0,
+                'tracker_id': 0,
                 'title': u'Все разделы',
                 'is_subforum': False,
             })
 
-        if '?' not in href or '=' not in href:
-            return None
+        if not href or '?' not in href or '=' not in href:
+            msg = "Can't parse breadcrumb link {}".format(etree.tostring(c))
+            raise ValueError(msg)
 
-        param, id = href.split('?')[1].split('=')
+        param, tracker_id = href.split('?')[1].split('=')
 
         return dict({
-            'id': int(id),
+            'tracker_id': int(tracker_id),
             'title': c.text,
             'is_subforum': param == 'f',
         })
@@ -149,33 +155,46 @@ class Scraper(object):
         decoded = self.decode_torrent(bindata)
         result = {
             'size': torrentsize(decoded['info']),
-            'infohash': infohash(decoded['info'])
+            'infohash': calculate_infohash(decoded['info'])
         }
         return result
 
-    def get_category_ids(self, user):
-        '''Return list of ids for all categories found in tracker map'''
+    def get_forum_ids(self, user):
+        '''Return list of ids for all forums found in tracker map'''
         wc = WebClient(self.config, user)
         html = wc.get_category_map()
         return self.parse_category_map(html)
 
     def parse_category_map(self, html):
         tree = make_tree(html)
-        rootdiv = tree.xpath('//div[@id="f-map"]')
-        links = rootdiv[0].xpath('//*/a')
-        hrefs = [l.attrib.get('href') for l in links if l.attrib.get('href')]
-        ids = [int(h) for h in hrefs if h.isdigit()]
-        return ids
+        sections = tree.xpath('//*/ul[@class="tree-root"]')
+        result = list()
+        for section in sections:
+            section_title = section.find('li/span/span').attrib.get('title')
 
-    def parse_forum_page(self, html):
+            # Skip private forums
+            if section_title == PRIVATE_SECTION_TITLE:
+                continue
+
+            hrefs = [a.attrib.get('href') for a in section.findall('.//a')]
+            result.extend([int(h) for h in hrefs if h.isdigit()])
+
+        return result
+
+    def get_forum_page_navlinks(self, html):
+        """Parse forum page and return list of links from breadcrumb"""
         tree = make_tree(html)
         links = tree.xpath('//*[@class="nav nav-top w100 pad_2"]/a')
         return links
 
-    def get_forum_categories(self, id, user):
+    def get_forum_categories(self, forum_id, user):
         wc = WebClient(self.config, user)
-        html = wc.get_forum_page(id)
-        links = self.parse_forum_page(html)
+        html = wc.get_forum_page(forum_id)
+        links = self.get_forum_page_navlinks(html)
+
+        if not links:
+            raise ValueError("Can't get categories for {}".format(forum_id))
+
         return self.parse_categories(links)
 
     def find_torrents(self, user, category_id=None):
@@ -226,7 +245,7 @@ class Scraper(object):
         return tdict
 
 
-def infohash(info):
+def calculate_infohash(info):
     '''Calculates torrent infohash from decoded info section'''
     return hashlib.sha1(bencode.bencode(info)).hexdigest()
 

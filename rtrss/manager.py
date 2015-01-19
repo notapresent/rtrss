@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 All database interactions are performed by Manager
 
@@ -143,24 +144,19 @@ class Manager(object):
         """
         topic = self.db.query(Topic).get(id)
 
-        if categories:
-            category = categories.pop()
-            self.ensure_category(category, categories)
-        else:
-            category = None
-            action = 'Updating' if topic else 'Adding'
-            _logger.warn('%s topic without category: %d', action, id)
+
+        category = categories.pop()
+        category_id = self.ensure_category(category, categories)
 
         if topic:
-            if category:
-                topic.category_id = category['id']
+            topic.category_id = category_id
             topic.title = title
             topic.updated_at = updated_at
 
         else:
             topic = Topic(
                 id=id,
-                category_id=category['id'] if category else None,
+                category_id=category_id,
                 title=title,
                 updated_at=updated_at
             )
@@ -172,25 +168,42 @@ class Manager(object):
     def ensure_category(self, cat, parents):
         """
         Check if category exists, create if not. Create all parent
-        categories if needed.
+        categories if needed. Returns category id
         """
-        category = self.db.query(Category).get(cat['id'])
+        category = (
+            self.db.query(Category)
+                .filter(
+                    Category.tracker_id==cat['tracker_id'],
+                    Category.is_subforum==cat['is_subforum'])
+            .first()
+        )
 
         if category:
-            return
+            return category.id
 
         if parents:
             parent_cat = parents.pop()
-            parent = self.db.query(Category).get(parent_cat['id'])
+            parent = (
+                self.db.query(Category)
+                    .filter(
+                        Category.tracker_id==parent_cat['tracker_id'],
+                        Category.is_subforum==parent_cat['is_subforum'])
+                .first()
+            )
 
-            if not parent:
-                self.ensure_category(parent_cat, parents)
+            if parent:
+                parent_id = parent.id
+            else:
+                parent_id = self.ensure_category(parent_cat, parents)
+        else:
+            parent_id = None
 
         category = Category(
-            id=cat['id'],
+            tracker_id=cat['tracker_id'],
+            is_subforum=cat['is_subforum'],
             title=cat['title'],
-            parent_id=cat['parent_id'],
-            is_subforum=cat['is_subforum']
+            parent_id=parent_id,
+            skip=cat.get('skip')
         )
 
         _logger.info('Adding category %s', category)
@@ -279,17 +292,36 @@ class Manager(object):
         user = self.select_user()
         scraper = Scraper(self.config)
 
-        for id in scraper.get_category_ids(user):
-            c = self.db.query(Category).get(id)
+        root = self.db.query(Category).get(0)
+        if not root:
+            root = Category(
+                id=0,
+                title=u'Все разделы',
+                parent_id=None,
+                tracker_id=0,
+                is_subforum=False,
+                skip=True
+            )
+            self.db.add(root)
 
-            if c:
+        for forum_id in scraper.get_forum_ids(user):
+            category = (
+                self.db.query(Category)
+                .filter(
+                    Category.tracker_id==forum_id,
+                    Category.is_subforum==True
+                )
+                .first()
+            )
+
+            if category:
                 old += 1
                 continue
 
-            catlist = scraper.get_forum_categories(id, user)
+            catlist = scraper.get_forum_categories(forum_id, user)
 
             if not catlist:
-                _logger.warn('Unable to get category list for forum %d', id)
+                _logger.warn('Unable to get category list for %d', forum_id)
                 continue
 
             self.ensure_category(catlist.pop(), catlist)
