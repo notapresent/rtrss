@@ -21,8 +21,21 @@ LOGLEVEL = logging.INFO
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 
 # Settings for torrent file storage
-_default_fsurl = 'file://{}'.format(os.path.join(DATA_DIR, 'torrents'))
+_default_fsurl = 'file://{}'.format(DATA_DIR)
 FILESTORAGE_URL = os.environ.get('RTRSS_FILESTORAGE_URL', _default_fsurl)
 GCS_PRIVATEKEY_URL = os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')
 
-SERVER_NAME = os.environ.get('OPENSHIFT_APP_DNS', 'localhost:8080')
+if 'OPENSHIFT_APP_DNS' in os.environ:       # production
+    SERVER_NAME = os.environ.get('OPENSHIFT_APP_DNS')
+    PORT = int(os.environ.get('OPENSHIFT_PYTHON_PORT', 8080))
+    IP = os.environ.get('OPENSHIFT_PYTHON_IP', '0.0.0.0')
+
+elif 'C9_HOSTNAME' in os.environ:       # Cloud9 dev environment
+    SERVER_NAME = os.environ.get('C9_HOSTNAME')
+    PORT = int(os.environ.get('C9_PORT', 8080))
+    IP = os.environ.get('C9_IP', '0.0.0.0')
+
+else:       # Local dev environment
+    SERVER_NAME = 'localhost:8080'
+    PORT = '8080'
+    HOST = '0.0.0.0'
