@@ -21,6 +21,12 @@ setup(
     license='Apache 2.0',
     download_url='https://github.com/notapresent/rtrss/archive/master.zip',
     install_requires=_requirements,
+    entry_points={
+        'console_scripts': [
+            'rtrssmgr = rtrss.worker:main',
+        ],
+    },
+
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
