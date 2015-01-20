@@ -74,7 +74,6 @@ def app_init():
     _setup_logging()
     _logger.info('Initializing worker')
     _set_signal_handlers()
-    # atexit.register(app_teardown)
 
 
 def app_teardown():
@@ -111,6 +110,9 @@ def db_action(action):
         database.clear_db()
     elif action == 'init':
         database.init_db()
+    elif action == 'import_users':
+        from rtrss.util import import_users
+        import_users('users.csv')
 
 
 def daemon_action(action):
@@ -158,7 +160,7 @@ def make_argparser():
     dbp.add_argument(
         'action',
         help='Perform database initialization or clean-up',
-        choices=['init', 'clear']
+        choices=['init', 'clear', 'import_users']
     )
     dbp.set_defaults(func=db_action)
 
