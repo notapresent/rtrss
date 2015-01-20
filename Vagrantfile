@@ -69,7 +69,7 @@ Vagrant.configure(2) do |config|
   #   sudo apt-get update
   #   sudo apt-get install -y apache2
   # SHELL
-    
+
 # First provision script, must be run as root
 $provision_root = <<SCRIPT
 #!/bin/sh
@@ -85,7 +85,7 @@ sudo apt-get install -y postgresql postgresql-client
 echo "Updating postgresql settings"
 sudo sed -i 's/peer/trust/' /etc/postgresql/9.3/main/pg_hba.conf
 echo '\nhost all all 192.168.254.0/24 md5' | sudo tee --append /etc/postgresql/9.3/main/pg_hba.conf
-sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/9.3/main/postgresql.conf 
+sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/9.3/main/postgresql.conf
 sudo service postgresql restart
 
 echo "Setting password for user postgres"
@@ -100,7 +100,7 @@ curl --silent --show-error --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo
 
 echo "Installing virtualenvwrapper"
 sudo -H pip install virtualenvwrapper
-echo 'source /usr/local/bin/virtualenvwrapper_lazy.sh' >> /home/vagrant/.bashrc 
+echo 'source /usr/local/bin/virtualenvwrapper_lazy.sh' >> /home/vagrant/.bashrc
 
 echo "Installing native package build requirements"
 sudo apt-get install -y build-essential postgresql-server-dev-9.3 python-dev libxml2-dev libxslt1-dev libffi-dev
@@ -125,9 +125,12 @@ pip install -r reqs/production.txt
 echo "Installing development dependencies"
 pip install -r reqs/development.txt
 
+echo "Configuring psql environment variables"
+printf "\n\nexport PGUSER=postgres\nexport PGDATABASE=rtrss_dev\n" >> ~/.bashrc
+
 SCRIPT
-    
-    
+
+
   config.vm.provision "shell", inline: $provision_root
   config.vm.provision "shell", inline: $provision_nonroot, privileged: false
 end
