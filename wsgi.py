@@ -1,5 +1,7 @@
 #!/usr/bin/python
 import os
+from rtrss import config
+
 
 if os.environ.get('OPENSHIFT_PYTHON_DIR'):      # on Openshift
     virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR') + '/virtenv/'
@@ -19,4 +21,4 @@ from rtrss.webapp import app as application
 # Below for testing only
 #
 if __name__ == '__main__':
-    application.run('0.0.0.0', 8080, debug=True)
+    application.run(config.IP, config.PORT, debug=True)
