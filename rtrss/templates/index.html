@@ -4,5 +4,16 @@
     </head>
     <body>
         <img src="{{ url_for('static', filename='logo.svg') }}">
+        <hr>
+
+<ul>
+{% for item in tree.children recursive %}
+    <li><a href="{{ url_for('feed', category_id=item.id) }}">{{ item.title }}</a>
+    {%- if item.children %}
+        <ul class="submenu">{{ loop(item.children) }}</ul>
+    {% endif -%}</li>
+{%- endfor %}
+</ul>
+
     </body>
 </html>
