@@ -447,6 +447,9 @@ class Manager(object):
         if estimate > slots_left_today:
             estimate = slots_left_today
 
+        if estimate > 1000:
+            estimate = 1000
+
         return int(estimate * 0.9)
 
     def daily_populate_task(self):
