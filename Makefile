@@ -12,4 +12,5 @@ clean-pyc:
 	find . -name '__pycache__' -type d | xargs rm -rf
 
 clean-data:
-	rm -rf ./data/*
+	rm -rf ./data/*.log
+	rm ./data/*.html
