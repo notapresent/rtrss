@@ -21,6 +21,12 @@ UPDATED_MARKER = u'[Обновлено]'
 # Section with this title contains private forums, we don't need
 PRIVATE_SECTION_TITLE = u'Приватные форумы'
 
+TOPIC_STOPLIST = [
+    u'Раздача ожидает проверки модератором',
+    u'Раздача имеет статус: <b>не оформлено</b><br><br>Скачивание запрещено',
+]
+
+
 def make_tree(html, encoding='utf-8'):
     parser = etree.HTMLParser(encoding=encoding)
     tree = etree.fromstring(html, parser=parser)
@@ -75,7 +81,22 @@ class Scraper(object):
     def get_topic(self, tid, user):
         wc = WebClient(self.config, user)
         html = wc.get_topic(tid)
-        return self.parse_topic(html)
+
+        for msg in TOPIC_STOPLIST:
+            if msg in html:
+                raise TopicException('Skipping topic {} because of {}'.format(
+                    tid, msg))
+
+        infohash, catlinks  = self.parse_topic(html)
+
+        if not catlinks:
+            msg = 'Failed to parse categories for topic {}'.format(tid)
+            raise ValueError(msg)
+
+        return dict({
+            'infohash': infohash,
+            'categories': self.parse_categories(catlinks)
+        })
 
     def parse_topic(self, html):
         tree = make_tree(html)
@@ -83,15 +104,7 @@ class Scraper(object):
         infohash = hashspans[0].text if hashspans else None
         # torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
         catlinks = tree.xpath('//*[@class="nav w100 pad_2"]/a')
-
-        if not catlinks:
-            raise ValueError()
-
-        return dict({
-            'infohash': infohash,
-            'categories': self.parse_categories(catlinks)
-            # 'has_torrent': bool(torrentlinks)
-        })
+        return infohash, catlinks
 
     def parse_categories(self, links):
         """Maked list of parsed categories from list of etree.Elements"""
@@ -194,6 +207,11 @@ class Scraper(object):
 
         if not links:
             raise ValueError("Can't get categories for {}".format(forum_id))
+
+        if len(links) == 1: # FIXME
+            print etree.tostring(links[0])
+            raise ValueError("Can't get parents for {}".format(forum_id))
+
 
         return self.parse_categories(links)
 

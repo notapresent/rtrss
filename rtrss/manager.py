@@ -5,7 +5,6 @@ All database interactions are performed by Manager
 """
 import logging
 import datetime
-# from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
@@ -13,7 +12,7 @@ from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss.exceptions import (TopicException, OperationInterruptedException,
                               CaptchaRequiredException, TorrentFileException)
-from rtrss.fstorage import make_storage
+from rtrss.filestorage import make_storage
 
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
@@ -171,11 +170,10 @@ class Manager(object):
         categories if needed. Returns category id
         """
         category = (
-            self.db.query(Category)
-                .filter(
-                    Category.tracker_id==cat['tracker_id'],
-                    Category.is_subforum==cat['is_subforum'])
-            .first()
+            self.db.query(Category).filter(
+                Category.tracker_id==cat['tracker_id'],
+                Category.is_subforum==cat['is_subforum']
+            ).first()
         )
 
         if category:
@@ -184,11 +182,10 @@ class Manager(object):
         if parents:
             parent_cat = parents.pop()
             parent = (
-                self.db.query(Category)
-                    .filter(
-                        Category.tracker_id==parent_cat['tracker_id'],
-                        Category.is_subforum==parent_cat['is_subforum'])
-                .first()
+                self.db.query(Category).filter(
+                    Category.tracker_id==parent_cat['tracker_id'],
+                    Category.is_subforum==parent_cat['is_subforum']
+                ).first()
             )
 
             if parent:
@@ -197,6 +194,8 @@ class Manager(object):
                 parent_id = self.ensure_category(parent_cat, parents)
         else:
             parent_id = None
+            _logger.warn('No parent category for %s(%d)',
+                cat['tracker_id'], cat['title'])
 
         category = Category(
             tracker_id=cat['tracker_id'],
@@ -208,6 +207,10 @@ class Manager(object):
 
         _logger.info('Adding category %s', category)
         self.db.add(category)
+        self.db.flush()
+        if category.id is None: # FIXME
+            raise ValueError('Dammit!')
+        return category.id
 
     def save_torrent(self, id, user, infohash, old_infohash=None):
         # FIXME this method needs refactoring
@@ -261,7 +264,7 @@ class Manager(object):
             return self._storage
 
     def store_torrentfile(self, id, torrentfile):
-        filename = '{}.torrent'.format(id)
+        filename = 'torrents/{}.torrent'.format(id)
         self.storage.put(
             filename,
             torrentfile,
@@ -282,13 +285,13 @@ class Manager(object):
             self.db.commit()
             raise OperationInterruptedException('No active users found')
 
-        _logger.debug("Selected user {}".format(user))
         return user
 
     def import_categories(self):
         """Import all existing tracker categories into DB"""
         _logger.info('Importing all categories from tracker')
-        old = new = 0
+        old = self.db.query(func.count(Category.id)).scalar()
+
         user = self.select_user()
         scraper = Scraper(self.config)
 
@@ -315,7 +318,6 @@ class Manager(object):
             )
 
             if category:
-                old += 1
                 continue
 
             catlist = scraper.get_forum_categories(forum_id, user)
@@ -325,10 +327,10 @@ class Manager(object):
                 continue
 
             self.ensure_category(catlist.pop(), catlist)
-            new += 1
             self.db.commit()
 
-        _logger.info("Category import completed, %d old, %d new", old, new)
+        new = self.db.query(func.count(Category.id)).scalar()
+        _logger.info("Category import completed, %d old, %d new", old, new-old)
 
     def populate_categories(self, count=1, total=None):
         """
@@ -364,13 +366,13 @@ class Manager(object):
 
         for cat, ntorrents in categories:
             # If this category has some torrents - only add missing amount
-            to_add = count if ntorrents == count else count - ntorrents
+            to_add =  count - ntorrents
 
             # Do not add more than total
             if total_added + to_add > total:
                 to_add = total - total_added
 
-            num_added = self.populate_category(cat.id, to_add)
+            num_added = self.populate_category(cat.tracker_id, to_add)
             total_added += num_added
             if not num_added:
                 cat.skip = True

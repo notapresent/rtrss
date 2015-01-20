@@ -30,7 +30,7 @@ PAGE_DOWNLOAD_DELAY = 0.5
 TORRENT_DOWNLOAD_DELAY = 5
 
 # Time between search requests (seconds)
-SEARCH_DELAY = 1.5
+SEARCH_DELAY = 1.8
 
 DL_LIMIT_MSG = u'Вы уже исчерпали суточный лимит скачиваний торрент-файлов'
 
