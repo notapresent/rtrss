@@ -37,5 +37,5 @@ elif 'C9_HOSTNAME' in os.environ:       # Cloud9 dev environment
 
 else:       # Local dev environment
     SERVER_NAME = 'localhost:8080'
-    PORT = '8080'
-    HOST = '0.0.0.0'
+    PORT = 8080
+    IP = '0.0.0.0'
