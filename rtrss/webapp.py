@@ -24,7 +24,7 @@ def index():
 def torrent(torrent_id):
     pass
 
-# @app.route('/feed/', defaults={'category_id': 0})     
+@app.route('/feed/', defaults={'category_id': 0})
 @app.route('/feed/<int:category_id>')
 def feed(category_id=0):
     feed_data = get_feed_data(category_id)
@@ -51,9 +51,14 @@ def setup():
 
 def get_feed_data(category_id):
     category = db.session.query(Category).get(category_id)
+    if category_id:
+        description = u'Новые раздачи в разделе {}'.format(category.title)
+    else:
+        description = u'Новые раздачи из всех разделов'
+
     channel_data = dict({
-        'title': category.title,
-        'description': u'Новые раздачи в разделе {}'.format(category.title),
+        'title': u'{} - {}'.format(app.config['TRACKER_HOST'], category.title),
+        'description': description,
         'link': category_link(category, app.config['TRACKER_HOST']),
         'lastBuildDate': datetime_to_rfc822(datetime.datetime.utcnow())
     })
@@ -67,7 +72,6 @@ def get_feed_data(category_id):
     items = list()
     deltas = list()
     last_dt = None
-
 
     for topic in topics:
         items.append(dict({
@@ -86,6 +90,7 @@ def get_feed_data(category_id):
     channel_data['ttl'] = int(calculate_ttl(deltas) / 60)
     return dict({'channel': channel_data, 'items': items})
 
+
 def calculate_ttl(deltas):
     """
     Calculations are based on median time delta between items and the number of
@@ -101,12 +106,10 @@ def calculate_ttl(deltas):
             return (lst[middle - 1] + lst[middle]) / 2.0
 
     median_delta = median(deltas)
-
     ttl = median_delta * (len(deltas) + 1) / 2
-
     ttl = min(max(ttl, MIN_TTL), MAX_TTL)   # Ensure MIN_TTL <= ttl <= MAX_TTL
-    print "Median delta:", median_delta, "Length:", len(deltas) + 1, ' TTL:', str(ttl)
     return ttl
+
 
 def datetime_to_rfc822(the_time):
     parsed = rfc822.parsedate_tz(the_time.strftime("%a, %d %b %Y %H:%M:%S"))
@@ -155,11 +158,11 @@ def make_category_tree():
     # TODO show only categories with torrents
     categories = (
         db.session.query(Category)
-            .filter(Category.id > 0)
-            .order_by(Category.is_subforum)
-            .order_by(Category.parent_id)
-            .order_by(Category.tracker_id)
-            .all()
+        .filter(Category.id > 0)
+        .order_by(Category.is_subforum)
+        .order_by(Category.parent_id)
+        .order_by(Category.tracker_id)
+        .all()
     )
 
     tree = dict({
