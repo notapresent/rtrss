@@ -31,7 +31,7 @@ def session_scope(SessionFactory=None):
         session.close()
 
 
-def init_db(eng=None):
+def init(eng=None):
     _logger.info('Initializing database')
 
     if eng is None:
@@ -41,7 +41,7 @@ def init_db(eng=None):
     Base.metadata.create_all(bind=eng)
 
 
-def clear_db(eng=None):
+def clear(eng=None):
     _logger.info('Clearing database')
 
     if eng is None:

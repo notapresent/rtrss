@@ -107,9 +107,9 @@ def worker_action(action):
 
 def db_action(action):
     if action == 'clear':
-        database.clear_db()
+        database.clear()
     elif action == 'init':
-        database.init_db()
+        database.init()
     elif action == 'import_users':
         from rtrss.util import import_users
         import_users('users.csv')
