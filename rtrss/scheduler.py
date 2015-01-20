@@ -14,6 +14,7 @@ from rtrss.manager import Manager
 from rtrss.database import session_scope
 
 
+
 # Feed update interval, minutes
 UPDATE_INTERVAL = 10
 
@@ -91,8 +92,8 @@ class Scheduler(object):
             manager = Manager(self.config, session)
             try:
                 getattr(manager, task_name)()
-            except OperationInterruptedException:
-                pass
+            except OperationInterruptedException as e:
+                _logger.warn(str(e))
 
     def is_safety_window(self):
         win = timedelta(minutes=SAFETY_WINDOW_SIZE)
