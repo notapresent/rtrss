@@ -8,7 +8,7 @@ from dateutil import parser as dateparser
 import pytz
 from lxml import etree
 
-from rtrss.exceptions import TopicException
+from rtrss.exceptions import TopicException, ItemProcessingFailedException
 from rtrss.webclient import WebClient
 from rtrss.util import save_debug_file
 
@@ -91,15 +91,22 @@ class Scraper(object):
                 raise TopicException('Skipping topic {} because of {}'.format(
                     tid, msg.encode('utf-8')))
 
-        infohash, catlinks  = self.parse_topic(html)
+        infohash, catlinks = self.parse_topic(html)
 
         if not catlinks:
             msg = 'Failed to parse categories for topic {}'.format(tid)
-            raise ValueError(msg)
+            raise TopicException(msg)
+
+        categories = self.parse_categories(catlinks)
+        if not categories:
+            src = ''.join([etree.tostring(l) for l in catlinks])
+            msg = 'Failed to parse categories in topic {}: {}'.format(tid, src)
+            raise TopicException(msg)
+
 
         return dict({
             'infohash': infohash,
-            'categories': self.parse_categories(catlinks)
+            'categories': categories
         })
 
     def parse_topic(self, html):
@@ -118,11 +125,6 @@ class Scraper(object):
         """Maked list of parsed categories from list of etree.Elements"""
 
         result = [self.parse_category(link) for link in links]
-
-        if not result:
-            src = ''.join([etree.tostring(l) for l in links])
-            raise ValueError('Failed to parse categories: {}'.format(src))
-
         return result
 
     def parse_category(self, c):
@@ -137,7 +139,7 @@ class Scraper(object):
 
         if not href or '?' not in href or '=' not in href:
             msg = "Can't parse breadcrumb link {}".format(etree.tostring(c))
-            raise ValueError(msg)
+            raise TopicException(msg)
 
         param, tracker_id = href.split('?')[1].split('=')
 
@@ -214,12 +216,13 @@ class Scraper(object):
         links = self.get_forum_page_navlinks(html)
 
         if not links:
-            raise ValueError("Can't get categories for {}".format(forum_id))
+            msg = "Can't get categories for {}".format(forum_id)
+            raise ItemProcessingFailedException(msg)
 
-        if len(links) == 1: # FIXME
-            print etree.tostring(links[0])
-            raise ValueError("Can't get parents for {}".format(forum_id))
-
+        if len(links) == 1:
+            dump = etree.tostring(links[0])
+            msg = "Can't get parents for forum {}: {}".format(forum_id, dump)
+            raise ItemProcessingFailedException(msg)
 
         return self.parse_categories(links)
 
@@ -239,9 +242,12 @@ class Scraper(object):
 
     def parse_search_row(self, row):
         topic = row.find('td[4]/div/a[@data-topic_id]')
+
         if topic is None:
-            print etree.tostring(row)
-            raise Exception
+            html = etree.tostring(row)
+            msg = 'Failed to parse search row: {}'.format(html)
+            raise ItemProcessingFailedException(msg)
+
         topic_id = int(topic.attrib['href'].split('=')[1])
         title = jointext(topic)
         cat_id = row.find('td[3]/*/a').attrib['href'].split('=')[1]

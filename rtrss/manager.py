@@ -5,14 +5,18 @@ All database interactions are performed by Manager
 """
 import logging
 import datetime
+
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
+
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss.exceptions import (TopicException, OperationInterruptedException,
-                              CaptchaRequiredException, TorrentFileException)
+                              CaptchaRequiredException, TorrentFileException,
+                              ItemProcessingFailedException)
 from rtrss.filestorage import make_storage
+
 
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
@@ -208,8 +212,6 @@ class Manager(object):
         _logger.info('Adding category %s', category)
         self.db.add(category)
         self.db.flush()
-        if category.id is None: # FIXME
-            raise ValueError('Dammit!')
         return category.id
 
     def save_torrent(self, id, user, infohash, old_infohash=None):
@@ -319,8 +321,10 @@ class Manager(object):
 
             if category:
                 continue
-
-            catlist = scraper.get_forum_categories(forum_id, user)
+            try:
+                catlist = scraper.get_forum_categories(forum_id, user)
+            except ItemProcessingFailedException as e:
+                _logger.error("Failed to import category: {}".format(e))
 
             if not catlist:
                 _logger.warn('Unable to get category list for %d', forum_id)
@@ -391,7 +395,11 @@ class Manager(object):
         """Add count torrents from category category_id"""
         scraper = Scraper(self.config)
         user = self.select_user()
-        torrents = scraper.find_torrents(user, category_id)
+        try:
+            torrents = scraper.find_torrents(user, category_id)
+        except ItemProcessingFailedException as e:
+            msg = "Failed to populate category {}: {}".format(category_id, e)
+            _logger.error(msg)
 
         added = 0
 
