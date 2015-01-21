@@ -2,13 +2,16 @@
 import logging
 import datetime
 import hashlib
+
 import bencode
 from dateutil import parser as dateparser
 import pytz
 from lxml import etree
+
 from rtrss.exceptions import TopicException
 from rtrss.webclient import WebClient
 from rtrss.util import save_debug_file
+
 
 _logger = logging.getLogger(__name__)
 
@@ -102,7 +105,11 @@ class Scraper(object):
         tree = make_tree(html)
         hashspans = tree.xpath('//span[@id="tor-hash"]')
         infohash = hashspans[0].text if hashspans else None
-        # torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
+        torrentlinks = tree.xpath('//a[@class="dl-stub dl-link"]')
+
+        if not torrentlinks:
+            infohash = None
+
         catlinks = tree.xpath('//*[@class="nav w100 pad_2"]/a')
         return infohash, catlinks
 
