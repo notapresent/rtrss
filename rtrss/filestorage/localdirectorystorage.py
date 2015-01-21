@@ -4,7 +4,9 @@ import errno
 import logging
 import urlparse
 import string
+
 import filelock
+
 
 _logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class DirectoryFileStorage(object):
         if not os.access(self._dir, os.W_OK):
             raise IOError('Directory {} is not writeable'.format(self._dir))
 
-        _logger.info('Directory storage initialized in {}'.format(self._dir))
+        _logger.debug('Directory storage initialized in {}'.format(self._dir))
 
     def full_path(self, key):
         return path.join(self._dir, slugify(key))
