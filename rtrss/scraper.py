@@ -27,6 +27,7 @@ PRIVATE_SECTION_TITLE = u'Приватные форумы'
 TOPIC_STOPLIST = [
     u'Раздача ожидает проверки модератором',
     u'Раздача имеет статус: <b>не оформлено</b><br><br>Скачивание запрещено',
+    u'Тема не найдена'
 ]
 
 
@@ -88,7 +89,7 @@ class Scraper(object):
         for msg in TOPIC_STOPLIST:
             if msg in html:
                 raise TopicException('Skipping topic {} because of {}'.format(
-                    tid, msg))
+                    tid, msg.encode('utf-8')))
 
         infohash, catlinks  = self.parse_topic(html)
 
