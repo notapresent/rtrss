@@ -113,7 +113,9 @@ def db_action(action):
         database.init()
     elif action == 'import_users':
         from rtrss.util import import_users
-        import_users('users.csv')
+
+        csvfilename = os.path.join(config.ROOT_DIR, 'users.csv')
+        import_users(csvfilename)
 
 
 def daemon_action(action):

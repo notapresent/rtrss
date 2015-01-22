@@ -5,9 +5,10 @@ import logging
 _devdb = 'postgresql://postgres:postgres@localhost/rtrss_dev'
 SQLALCHEMY_DATABASE_URI = os.environ.get('OPENSHIFT_POSTGRESQL_DB_URL', _devdb)
 
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+
 # directory to store runtime data, write access required
-_projdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', os.path.join(_projdir, 'data'))
+DATA_DIR = os.environ.get('OPENSHIFT_DATA_DIR', os.path.join(ROOT_DIR, 'data'))
 
 TRACKER_HOST = 'rutracker.org'
 
