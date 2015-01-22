@@ -98,7 +98,7 @@ class BaseDaemon(daemonized.Daemonize):
                 i = i + 1
             os.kill(pid, signal.SIGTERM)
         except OSError as err:
-            if err.errno in 3:  # No such process
+            if err.errno == 3:  # No such process
                 pass
             else:
                 msg = "Failed to kill process {} : {}".format(pid, str(err))
