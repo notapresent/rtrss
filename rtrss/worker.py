@@ -4,6 +4,7 @@ import os
 import logging
 import signal
 import argparse
+
 from rtrss import config
 from rtrss import scheduler
 from rtrss import database
@@ -47,7 +48,7 @@ def _setup_logging():
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
     rootlogger.addHandler(console_handler)
-    _logger.info('Logging to stderr initialized')
+    _logger.debug('Logging to stderr initialized')
 
     # logging to file
     log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
@@ -56,7 +57,7 @@ def _setup_logging():
     file_handler.setFormatter(formatter)
     file_handler.setLevel(config.LOGLEVEL)
     rootlogger.addHandler(file_handler)
-    _logger.info('Logging to %s with loglevel %s initialized',
+    _logger.debug('Logging to %s with loglevel %s initialized',
                  filename, logging.getLevelName(config.LOGLEVEL))
 
     # TODO external logging service handler here

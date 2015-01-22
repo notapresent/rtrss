@@ -165,7 +165,7 @@ class WebClient(object):
         html = response.text
 
         if self.is_signed_in(html):
-            _logger.info('User %s signed in', self.user)
+            _logger.debug('User %s signed in', self.user)
             user.cookies = dict_from_cookiejar(self.session.cookies)
 
         elif CAPTCHA_STR.format(host=self.config.TRACKER_HOST) in html:

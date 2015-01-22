@@ -19,6 +19,7 @@ from rtrss.filestorage import make_storage
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -53,7 +54,7 @@ class Manager(object):
                 _logger.debug('User %s - torrent dl failed', user)
 
             if not user.can_download():
-                _logger.info('User %s reached download limit, changing', user)
+                _logger.debug('User %s reached download limit, changing', user)
                 user.downloads_today = user.downloads_limit
                 user = self.select_user()
 
