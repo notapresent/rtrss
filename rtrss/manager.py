@@ -18,6 +18,7 @@ from rtrss.exceptions import (TopicException, OperationInterruptedException,
 from rtrss.filestorage import make_storage
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -370,7 +371,7 @@ class Manager(object):
 
         for cat, ntorrents in categories:
             # If this category has some torrents - only add missing amount
-            to_add =  count - ntorrents
+            to_add = count - ntorrents
 
             # Do not add more than total
             if total_added + to_add > total:
@@ -386,10 +387,7 @@ class Manager(object):
                 break
 
         _logger.info(
-            'Added %d torrents to %d categories',
-            total_added,
-            len(categories)
-        )
+            'Added %d torrents', total_added)
 
     def populate_category(self, category_id, count):
         """Add count torrents from category category_id"""
