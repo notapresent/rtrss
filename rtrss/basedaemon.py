@@ -1,9 +1,10 @@
-import daemonized
-import filelock
 import sys
 import signal
 import os
 import time
+
+import daemonized
+import filelock
 
 
 class BaseDaemon(daemonized.Daemonize):
@@ -97,7 +98,7 @@ class BaseDaemon(daemonized.Daemonize):
                 i = i + 1
             os.kill(pid, signal.SIGTERM)
         except OSError as err:
-            if err.errno == 3:        # No such process
+            if err.errno in 3:  # No such process
                 pass
             else:
                 msg = "Failed to kill process {} : {}".format(pid, str(err))
@@ -110,5 +111,7 @@ class BaseDaemon(daemonized.Daemonize):
         except OSError as err:
             if err.errno == 2:        # file not found
                 pass
-            sys.stderr.write("Failed to remove pidfile: {}".format(str(err)))
-            sys.exit(1)
+            else:
+                sys.stderr.write(
+                    "Failed to remove pidfile: {}".format(str(err)))
+                sys.exit(1)
