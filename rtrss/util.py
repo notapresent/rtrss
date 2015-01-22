@@ -2,6 +2,7 @@ import csv
 import logging
 import os
 import datetime
+
 from rtrss import config
 from rtrss.models import User
 from rtrss.database import session_scope
@@ -22,6 +23,8 @@ def import_users(filename):
     with open(filename) as csvfile:
         reader = csv.DictReader(csvfile, skipinitialspace=True)
         lines = [line for line in reader]
+
+    _logger.info("Importing {} accounts from {}".format(filename, len(lines)))
 
     added = 0
     with session_scope() as db:
