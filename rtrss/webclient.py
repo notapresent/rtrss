@@ -80,7 +80,6 @@ class WebClient(object):
         if response.is_text:
             response.encoding = detect_encoding(response)
 
-        # TODO Make this work. Maintenance is at 04:40. Should work now
         if response.is_text and MAINTENANCE_MSG in response.text:
             raise OperationInterruptedException('Tracker maintenance')
 
@@ -104,8 +103,8 @@ class WebClient(object):
 
         return response
 
-    def get_topic(self, id):
-        url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=id)
+    def get_topic(self, tid):
+        url = TOPIC_URL.format(host=self.config.TRACKER_HOST, topic_id=tid)
         time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
 
@@ -156,12 +155,12 @@ class WebClient(object):
 
     def sign_in(self, user):
         login_url = LOGIN_URL.format(host=self.config.TRACKER_HOST)
-        postdata = {'login_username': user.username,
-                    'login_password': user.password,
-                    'login': '%C2%F5%EE%E4'}
+        post_data = {'login_username': user.username,
+                     'login_password': user.password,
+                     'login': '%C2%F5%EE%E4'}
 
         time.sleep(PAGE_DOWNLOAD_DELAY)
-        response = self.request(login_url, 'post', data=postdata)
+        response = self.request(login_url, 'post', data=post_data)
         html = response.text
 
         if self.is_signed_in(html):
@@ -186,8 +185,8 @@ class WebClient(object):
         time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
 
-    def get_forum_page(self, id):
-        url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=id)
+    def get_forum_page(self, fid):
+        url = SUBFORUM_URL.format(host=self.config.TRACKER_HOST, id=fid)
         time.sleep(PAGE_DOWNLOAD_DELAY)
         return self.authorized_request(url).text
 
