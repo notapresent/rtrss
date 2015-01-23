@@ -48,10 +48,11 @@ Production deployment on [Openshift](https://www.openshift.com/)
 ### Step-by-step guide:
 
 1. Choose a name: `export APP_NAME='<Your app name here>'`
-2. Create openshift application: `rhc create-app "$APP_NAME" python-2.7 postgresql-9.2`
+2. Create openshift application: `rhc create-app "$APP_NAME" python-2.7 postgresql-9.2 --from-code=https://github.com/notapresent/rtrss.git`
 3. `cd $APP_NAME`
-4. `git remote add upstream -m master https://github.com/notapresent/rtrss.git`
-5. `git pull -s recursive -X theirs --no-edit upstream master`
-6. Set up configuration values: `rhc set-env RTRSS_SECRET_KEY='<Secret key>' RTRSS_FILESTORAGE_URL='<Storage URL>'`
-7. Push code to openshift: `git push`
-8. TODO
+4. Set up configuration values: `rhc set-env RTRSS_SECRET_KEY='<Secret key>' RTRSS_FILESTORAGE_URL='<Storage URL>'`
+5. ssh into newly created application: `rhc ssh`. Following commands are executed on server
+6. Activate virtualenv environment: `source "$OPENSHIFT_HOMEDIR/python/virtenv/bin/activate"`
+7. Initialize database: `rtrssmgr db init'`
+8. Add user accounts
+9. TODO
