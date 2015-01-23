@@ -28,7 +28,7 @@ class Category(Base):
     title = Column(String(500), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('tracker_id', 'is_subforum')
+        UniqueConstraint('tracker_id', 'is_subforum'),
     )
 
     def __repr__(self):
