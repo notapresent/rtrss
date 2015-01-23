@@ -1,9 +1,11 @@
 import logging
+
 from sqlalchemy import Column, Integer, String, ForeignKey, PickleType,\
     Boolean, BigInteger, DateTime, Index
-from sqlalchemy.orm import relationship, relation
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import UniqueConstraint
+
 
 __all__ = ["Category", "Topic", "Torrent", "User"]
 
@@ -18,18 +20,15 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     tracker_id = Column(Integer, nullable=False)
     is_subforum = Column(Boolean, nullable=False, default=True)
-
     parent_id = Column(Integer, ForeignKey('categories.id'))
-    title = Column(String(500), nullable=False)
 
     # Skip this category during initial categories population
     skip = Column(Boolean, nullable=True)
 
-    parent = relation('Category', remote_side=[id])     # TODO do we need this?
+    title = Column(String(500), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint(
-            'tracker_id', 'is_subforum'),       # , name='_tracker_id_uc'
+        UniqueConstraint('tracker_id', 'is_subforum')
     )
 
     def __repr__(self):
@@ -41,9 +40,10 @@ class Topic(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=False)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=True)
-    title = Column(String(500), nullable=False)
-    # 'Updated' value provided by the tracker, UTC
+    # 'Updated' value provided by the tracker, stored in UTC
     updated_at = Column(DateTime, nullable=False)
+
+    title = Column(String(500), nullable=False)
 
     category = relationship("Category", backref='topics')
     torrent = relationship('Torrent', uselist=False, backref='topic')
@@ -51,7 +51,7 @@ class Topic(Base):
     def __repr__(self):
         return u"<Topic(id={}, title='{}')>".format(self.id, self.title)
 
-# TODO Tune
+# TODO Tune indexes
 # Index('ix_category_updated_at', Topic.category_id, Torrent.updated_at.desc())
 Index('ix_category', Topic.category_id)
 Index('ix_updated_at', Topic.updated_at.desc())
@@ -70,8 +70,6 @@ class Torrent(Base):
     size = Column(BigInteger, nullable=False)
     tfsize = Column(Integer, nullable=False)  # torrent file size
 
-    # topic = relationship('Topic', uselist=False)
-
     def __repr__(self):
         return u"<Torrent(id={}, hash='{}')>".format(self.id, self.infohash)
 
@@ -80,11 +78,11 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, autoincrement=False)
-    username = Column(String(50), nullable=False)
-    password = Column(String(20), nullable=False)
     enabled = Column(Boolean, nullable=False, default=True)
     downloads_limit = Column(Integer, default=100)
     downloads_today = Column(Integer, nullable=False, default=0)
+    username = Column(String(50), nullable=False)
+    password = Column(String(20), nullable=False)
     cookies = Column(PickleType, default=dict())
 
     def can_download(self):
