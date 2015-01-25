@@ -38,7 +38,7 @@ def make_tree(html, encoding='utf-8'):
 
 
 def jointext(elem):
-    '''Joins text from element and all its sub-elements'''
+    """Joins text from element and all its sub-elements"""
     return elem.text + ''.join(e.text for e in elem.iterdescendants())
 
 
@@ -47,7 +47,7 @@ class Scraper(object):
         self.config = config
 
     def get_latest_topics(self):
-        '''Parses ATOM feed, returns topic_id:dict(topic)'''
+        """Parses ATOM feed, returns topic_id:dict(topic)"""
         wc = WebClient(self.config)
         feed = wc.get_feed()
 
@@ -149,38 +149,28 @@ class Scraper(object):
             'is_subforum': param == 'f',
         })
 
-    def get_torrent(self, id, user):
+    def get_torrent(self, tid, user):
         wc = WebClient(self.config, user)
-        bindata = wc.get_torrent(id)
-        decoded = self.decode_torrent(bindata)
-        decoded = self.process_torrent(decoded)
-        return bencode.bencode(decoded)
+        bindata = wc.get_torrent(tid)
 
-    def decode_torrent(self, bindata):
         try:
             decoded = bencode.bdecode(bindata)
-        except bencode.BTL.BTFailure as e:
-            _logger.error("Failed to decode torrent %d: %s", id, str(e))
+
+        except bencode.BTFailure as e:
+            message = "Failed to decode torrent {}: {}".format(tid, str(e))
+            _logger.error(message)
             if self.config.DEBUG:
-                save_debug_file('{}-failed.torrent'.format(id), bindata)
-            raise TopicException(str(e))
+                save_debug_file('{}-failed.torrent'.format(tid), bindata)
+            raise TopicException(message)
 
-        return decoded
+        processed = process_torrent(decoded)
+        torrent_dict = dict({
+            'download_size': calculate_download_size(processed['info']),
+            'infohash': calculate_infohash(processed['info']),
+            'torrentfile': bencode.bencode(processed)
+        })
 
-    def process_torrent(self, decoded):
-        '''remove announce urls with user passkey'''
-        decoded.pop('announce', None)
-        annlst = decoded['announce-list']
-        decoded['announce-list'] = filter(lambda a: '?uk=' not in a[0], annlst)
-        return decoded
-
-    def parse_torrent(self, bindata):
-        decoded = self.decode_torrent(bindata)
-        result = {
-            'size': torrentsize(decoded['info']),
-            'infohash': calculate_infohash(decoded['info'])
-        }
-        return result
+        return torrent_dict
 
     def get_forum_ids(self, user):
         '''Return list of ids for all forums found in tracker map'''
@@ -278,17 +268,25 @@ class Scraper(object):
 
 
 def calculate_infohash(info):
-    '''Calculates torrent infohash from decoded info section'''
+    """Calculates torrent infohash from decoded info section"""
     return hashlib.sha1(bencode.bencode(info)).hexdigest()
 
 
-def torrentsize(info):
-    '''Calculates torrent size from decoded info section'''
+def calculate_download_size(info):
+    """Calculates torrent size from decoded info section"""
     length = info.get('length', 0)
     if length:
         return length
 
-    for file in info['files']:
-        length += file['length']
+    for entry in info['files']:
+        length += entry['length']
 
     return length
+
+
+def process_torrent(decoded):
+    """Remove all announce urls with user passkey"""
+    decoded.pop('announce', None)
+    ann_list = decoded['announce-list']
+    decoded['announce-list'] = filter(lambda a: '?uk=' not in a[0], ann_list)
+    return decoded

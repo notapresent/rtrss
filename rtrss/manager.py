@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 All database interactions are performed by Manager
-
 """
 import logging
 import datetime
@@ -9,14 +8,16 @@ import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy import or_
 
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
 from rtrss.exceptions import (TopicException, OperationInterruptedException,
                               CaptchaRequiredException, TorrentFileException,
-                              ItemProcessingFailedException)
-from rtrss.filestorage import make_storage
-
+                              ItemProcessingFailedException,
+                              DownloadLimitException)
+import rtrss.filestorage as filestorage
+from rtrss.database import session_scope
 
 
 
@@ -28,213 +29,201 @@ _logger = logging.getLogger(__name__)
 
 
 class Manager(object):
-    def __init__(self, config, dbsession):
+    def __init__(self, config):
         self._storage = None
         self.config = config
-        self.db = dbsession
         self.changed_categories = set()
+
+    @property
+    def storage(self):
+        if self._storage:
+            return self._storage
+        else:
+            self._storage = filestorage.make_storage(self.config)
+            return self._storage
+
+    def run_task(self, task_name, *args, **kwargs):
+        """Run task, catching all exceptions"""
+        try:
+            getattr(self, task_name)(*args, **kwargs)
+        except ZeroDivisionError:
+            raise
+            # except OperationInterruptedException as e:
+            # _logger.warn("Operation interrupted: {}".format(str(e)))
+            # except Exception as e:    # TODO better error message and stacktrace
+            # _logger.error("%s %s", type(e), str(e))
 
     def update(self):
         _logger.debug('Starting update')
-        torrents_added = 0
-        user = self.select_user()
 
-        updlist = self.make_update_list()
+        torrents_changed = 0
 
-        for id, topic in updlist.items():
+        for item in self.make_pending_list():
             try:
-                torrents_added += self.process_topic(id, topic, user)
+                torrents_changed += self.process_pending_topic(item)
+            except (TopicException, TorrentFileException) as e:
+                _logger.debug('Failed to proces topic: %s', e)
 
-            except TopicException:
-                pass
-
-            except (CaptchaRequiredException, TorrentFileException):
-                user.downloads_today = user.downloads_limit
-                self.db.add(user)
-                _logger.debug('User %s - torrent dl failed', user)
-
-            if not user.can_download():
-                _logger.debug('User %s reached download limit, changing', user)
-                user.downloads_today = user.downloads_limit
-                user = self.select_user()
-
-            self.db.commit()
-
-        _logger.info('%d torrents added', torrents_added)
+        _logger.info('%d torrents added/updated', torrents_changed)
 
         self.invalidate_cache()
-
-    def make_update_list(self):
-        scraper = Scraper(self.config)
-        latest = scraper.get_latest_topics()
-        existing = self.load_topics(latest.keys())
-        return self.new_topics(latest, existing)
 
     def cleanup(self):
         removed = 0
         # TODO Implement this
+        self.invalidate_cache()
         _logger.info('Cleanup finished, %d torrents removed', removed)
 
     def daily_reset(self):
         """Reset user download counters"""
-        self.db.query(User).update({User.downloads_today: 0})
+        with session_scope() as db:
+            db.query(User).update({User.downloads_today: 0})
         _logger.info('Daily reset finished')
 
-    def load_topics(self, ids):
+    def make_pending_list(self):
         """
-        Loads existing topics from database, returns dict(topic_id: infohash)
-        """
-        existing = self.db.query(Topic)\
-            .options(joinedload(Topic.torrent))\
-            .filter(Topic.id.in_(ids))\
-            .all()
-        result = dict()
-        for t in existing:
-            result[t.id] = t.torrent.infohash if t.torrent else None
-
-        return result
-
-    def new_topics(self, latest, existing):
-        existing_ids = existing.keys()
-        result = dict()
-
-        for id, topic in latest.items():
-            # new topic
-            if id not in existing_ids:
-                result[id] = topic
-                result[id]['new'] = True
-
-            # updated existing topic
-            elif topic['changed']:
-                result[id] = topic
-                result[id]['new'] = False
-                result[id]['old_infohash'] = existing[id]
-
-        return result
-
-    def process_topic(self, id, tdict, user):
-        """
-        Process topic, categories and torrent. Returns 1 if torrent was added
-        or updated, 0 otherwise
+        Returns list of topics to process
         """
         scraper = Scraper(self.config)
-        parsed = scraper.get_topic(id, user)
+        latest = scraper.get_latest_topics()
+        existing = load_topics(latest.keys())
 
-        title = tdict['title']
-        dt = tdict['updated_at']
-        old_infohash = tdict.get('old_infohash')
-        catlist = parsed['categories']
+        existing_ids = existing.keys()
+        pending = list()
+
+        for tid, topic in latest.items():
+
+            if tid in existing_ids and not topic['changed']:
+                continue
+
+            topic['id'] = tid
+            topic['new'] = not topic['changed']
+            topic['old_infohash'] = existing.get(tid)
+
+            pending.append(topic)
+
+        return pending
+
+    def process_pending_topic(self, item):
+        """Process new or updated torrent/topic. Returns 1 if torrent was added
+        or updated, 0 otherwise
+        :returns int
+        """
+
+        tid = item['id']
+        user = select_user()
+        scraper = Scraper(self.config)
+        parsed = scraper.get_topic(tid, user)
+
+        with session_scope() as db:
+            db.add(user)
+
+        title = item['title']
+        is_new_topic = item['new']
+        updated_at = item['updated_at']
+        categories = parsed['categories']
         infohash = parsed['infohash']
+        old_infohash = item.get('old_infohash')
+
+        category_id = self.ensure_category(categories.pop(), categories)
 
         # Save topic only if it is new or infohash changed (but not removed)
-        if tdict['new'] or (infohash and infohash != old_infohash):
-            self.save_topic(id, title, catlist, dt)
-            result = 1
-        else:
-            result = 0
+        if is_new_topic or (infohash and infohash != old_infohash):
+            save_topic(tid, category_id, updated_at, title)
 
         # do not save torrent if no infohash
         if not infohash:
-            return result
+            return 0
 
         # Torrent new or changed
-        if tdict['new'] or old_infohash != infohash:
-            self.save_torrent(id, user, infohash, old_infohash)
+        if is_new_topic or old_infohash != infohash:
+            self.process_torrent(tid, infohash, old_infohash)  # FIXME
 
-        return result
+        return 1
 
-    def save_topic(self, id, title, categories, updated_at):
-        """
-        Insert or update topic and categories
-        """
-        topic = self.db.query(Topic).get(id)
-
-
-        category = categories.pop()
-        category_id = self.ensure_category(category, categories)
-
-        if topic:
-            topic.category_id = category_id
-            topic.title = title
-            topic.updated_at = updated_at
-
-        else:
-            topic = Topic(
-                id=id,
-                category_id=category_id,
-                title=title,
-                updated_at=updated_at
-            )
-
-        _logger.debug('Saving topic %s', topic)
-        self.db.add(topic)
-        return topic
-
-    def ensure_category(self, cat, parents):
+    def ensure_category(self, c_dict, parents):
         """
         Check if category exists, create if not. Create all parent
         categories if needed. Returns category id
         """
-        category = (
-            self.db.query(Category).filter(
-                Category.tracker_id==cat['tracker_id'],
-                Category.is_subforum==cat['is_subforum']
-            ).first()
-        )
+        category = find_category(c_dict['tracker_id'], c_dict['is_subforum'])
 
         if category:
             return category.id
 
         if parents:
-            parent_cat = parents.pop()
-            parent = (
-                self.db.query(Category).filter(
-                    Category.tracker_id==parent_cat['tracker_id'],
-                    Category.is_subforum==parent_cat['is_subforum']
-                ).first()
-            )
+            p_dict = parents.pop()
+            parent = find_category(p_dict['tracker_id'], p_dict['is_subforum'])
 
             if parent:
                 parent_id = parent.id
             else:
-                parent_id = self.ensure_category(parent_cat, parents)
-        else:
+                parent_id = self.ensure_category(p_dict, parents)
+        elif c_dict['tracker_id'] == 0:
             parent_id = None
-            _logger.warn('No parent category for %s(%d)',
-                cat['tracker_id'], cat['title'])
+        else:
+            msg = u'No parent category for {}({})'.format(c_dict['tracker_id'],
+                                                          c_dict['title'])
+            _logger.warn(msg)
+            # Skip topic if we can't add its category
+            raise TopicException(msg)
 
         category = Category(
-            tracker_id=cat['tracker_id'],
-            is_subforum=cat['is_subforum'],
-            title=cat['title'],
+            tracker_id=c_dict['tracker_id'],
+            is_subforum=c_dict['is_subforum'],
+            title=c_dict['title'],
             parent_id=parent_id,
-            skip=cat.get('skip')
+            skip=c_dict.get('skip')
         )
 
-        _logger.info('Adding category %s', category)
-        self.db.add(category)
-        self.db.flush()
+        with session_scope() as db:
+            db.add(category)
+
+        category = find_category(c_dict['tracker_id'], c_dict['is_subforum'])
+        _logger.info('Added category %s (%d)', category.title, category.id)
         return category.id
 
-    def save_torrent(self, id, user, infohash, old_infohash=None):
-        # FIXME this method needs refactoring
-        # Increment download counter, download, decrement it if error
+    def process_torrent(self, tid, infohash, old_infohash=None):
         scraper = Scraper(self.config)
+        user = select_user()
+        torrent_dict = None
+        retry_count = 0
 
-        torrentfile = scraper.get_torrent(id, user)
+        while torrent_dict is None and retry_count < 3:
+            try:
+                # This call can raise TopicException, CaptchaRequiredException
+                # or TorrentFileException
+                torrent_dict = scraper.get_torrent(tid, user)
+
+            except CaptchaRequiredException:
+                # Retry with different user
+                user = select_user()
+            except DownloadLimitException:  # User reached download limit
+                user.downloads_today = user.downloads_limit
+                with session_scope() as db:
+                    db.add(user)
+
         user.downloads_today += 1
 
-        parsed = scraper.parse_torrent(torrentfile)
+        with session_scope() as db:
+            db.add(user)
 
-        if infohash.lower() != parsed['infohash'].lower():
-            msg = 'Torrent {} hash mismatch: {}/{}'.format(id, infohash,
-                                                           parsed['infohash'])
+        torrentfile = torrent_dict['torrentfile']
+        real_infohash = torrent_dict['infohash']
+        download_size = torrent_dict['download_size']
+
+        if infohash.lower() != real_infohash.lower():
+            msg = 'Torrent {} hash mismatch: {}/{}'.format(tid, infohash,
+                                                           real_infohash)
             _logger.error(msg)
             raise TopicException(msg)
 
-        torrent = self.db.query(Torrent) \
-            .filter(Torrent.infohash == infohash) \
-            .first()
+        with session_scope() as db:
+            torrent = (
+                db.query(Torrent)
+                .filter(Torrent.infohash == infohash)
+                .first()
+            )
 
         if torrent:
             msg = 'Torrent with infohash {} already exists: {}'.format(
@@ -242,33 +231,21 @@ class Manager(object):
             _logger.error(msg)
             raise TopicException(msg)
 
-        torrent = self.db.query(Torrent).get(id)
+        torrent = Torrent(
+            id=tid,
+            infohash=infohash,
+            size=download_size,
+            tfsize=len(torrentfile)
+        )
 
-        if torrent:
-            torrent.infohash = infohash
-            torrent.tfsize = len(torrentfile)
-            torrent.size = parsed['size']
-        else:
-            torrent = Torrent(
-                id=id,
-                infohash=infohash,
-                size=parsed['size'],
-                tfsize=len(torrentfile)
-            )
+        with session_scope() as db:
+            db.merge(torrent)
 
-        self.db.add(torrent)
-        self.store_torrentfile(id, torrentfile)
+        filename = 'torrents/{}.torrent'.format(tid)
 
-    @property
-    def storage(self):
-        if self._storage:
-            return self._storage
-        else:
-            self._storage = make_storage(self.config)
-            return self._storage
+        if old_infohash:
+            self.storage.delete(filename)
 
-    def store_torrentfile(self, id, torrentfile):
-        filename = 'torrents/{}.torrent'.format(id)
         self.storage.put(
             filename,
             torrentfile,
@@ -276,82 +253,72 @@ class Manager(object):
         )
 
     def invalidate_cache(self):
-        pass  # TODO implement this
+        """Invalidates cache for all changed categories. Should be called after
+        all operations that may add, change or delete topics/torrents"""
+        for category_id in self.changed_categories:
+            pass  # TODO implement this
 
-    def select_user(self):
-        """Select one random user with download slots available"""
-        try:
-            user = self.db.query(User)\
-                .filter(User.enabled.is_(True))\
-                .filter(User.downloads_limit > User.downloads_today)\
-                .order_by(func.random()).limit(1).one()
-        except NoResultFound:
-            self.db.commit()
-            raise OperationInterruptedException('No active users found')
-
-        return user
-
-    def import_categories(self):
+    def sync_categories(self):
         """Import all existing tracker categories into DB"""
-        _logger.info('Importing all categories from tracker')
-        old = self.db.query(func.count(Category.id)).scalar()
-
-        user = self.select_user()
+        _logger.info('Syncing tracker categories')
+        user = select_user(False)
         scraper = Scraper(self.config)
 
-        root = self.db.query(Category).get(0)
-        if not root:
-            root = Category(
-                id=0,
-                title=u'Все разделы',
-                parent_id=None,
-                tracker_id=0,
-                is_subforum=False,
-                skip=True
-            )
-            self.db.add(root)
+        with session_scope() as db:
+            old = db.query(func.count(Category.id)).scalar()
+
+            root = db.query(Category).get(0)
+            if not root:  # Create root category
+                root = Category(
+                    id=0,
+                    title=u'Все разделы',
+                    parent_id=None,
+                    tracker_id=0,
+                    is_subforum=False,
+                    skip=True
+                )
+                db.add(root)
 
         for forum_id in scraper.get_forum_ids(user):
-            category = (
-                self.db.query(Category)
-                .filter(
-                    Category.tracker_id==forum_id,
-                    Category.is_subforum==True
-                )
-                .first()
-            )
+            category = find_category(forum_id, True)
 
             if category:
                 continue
+
             try:
-                catlist = scraper.get_forum_categories(forum_id, user)
+                cat_list = scraper.get_forum_categories(forum_id, user)
             except ItemProcessingFailedException as e:
                 _logger.error("Failed to import category: {}".format(e))
 
-            if not catlist:
+            if not cat_list:
                 _logger.warn('Unable to get category list for %d', forum_id)
                 continue
 
-            self.ensure_category(catlist.pop(), catlist)
-            self.db.commit()
+            self.ensure_category(cat_list.pop(), cat_list)
 
-        new = self.db.query(func.count(Category.id)).scalar()
-        _logger.info("Category import completed, %d old, %d new", old, new-old)
+        new = db.query(func.count(Category.id)).scalar()
+
+        _logger.info("Category sync completed, %d old, %d added", old,
+                     new - old)
 
     def populate_categories(self, count=1, total=None):
         """
         Add count (or less) torrents to every category with less then count
         torrents, no more than total torrents
         """
-        categories = self.db.query(Category, func.count(Torrent.id))\
-            .outerjoin(Topic)\
-            .outerjoin(Torrent)\
-            .filter(Category.is_subforum)\
-            .filter(Category.skip.isnot(True))\
-            .group_by(Category.id)\
-            .having(func.count(Torrent.id) < count)\
-            .order_by(Category.id)\
-            .all()
+        with session_scope() as db:
+            categories = (
+                db.query(Category, func.count(Torrent.id))
+                .outerjoin(Topic)
+                .outerjoin(Torrent)
+                .filter(Category.is_subforum)
+                .filter(Category.skip.isnot(True))
+                .group_by(Category.id)
+                .having(func.count(Torrent.id) < count)
+                .order_by(Category.id)
+                .all()
+            )
+            db.expunge_all()
 
         _logger.debug(
             'Found %d categories with less than %d torrents',
@@ -370,44 +337,47 @@ class Manager(object):
 
         total_added = 0
 
-        for cat, ntorrents in categories:
+        for cat, num_torrents in categories:
             # If this category has some torrents - only add missing amount
-            to_add = count - ntorrents
+            to_add = count - num_torrents
 
             # Do not add more than total
             if total_added + to_add > total:
                 to_add = total - total_added
 
-            num_added = self.populate_category(cat.tracker_id, to_add)
-            total_added += num_added
-            if not num_added:
-                cat.skip = True
-            self.db.commit()
+            added = self.populate_category(cat.tracker_id, to_add)
+            total_added += added
+            _logger.info('Added %d torrents to %s ', added, cat.title)
 
-            if total_added == total:
+            if total_added >= total:
                 break
 
         _logger.info(
             'Added %d torrents', total_added)
 
-    def populate_category(self, category_id, count):
-        """Add count torrents from category category_id"""
+    def populate_category(self, forum_id, count):
+        """Add count torrents from subforum forum_id"""
         scraper = Scraper(self.config)
-        user = self.select_user()
+        user = select_user()
         try:
-            torrents = scraper.find_torrents(user, category_id)
+            torrents = scraper.find_torrents(user, forum_id)
         except ItemProcessingFailedException as e:
-            msg = "Failed to populate category {}: {}".format(category_id, e)
+            msg = "Failed to populate category {}: {}".format(forum_id, e)
             _logger.error(msg)
+            torrents = []
+
+        with session_scope() as db:
+            db.add(user)
+
+        if not torrents:
+            _logger.debug('No torrents found in category %d', forum_id)
+            return 0
 
         added = 0
 
-        if not torrents:
-            _logger.debug('No torrents found in category %d', category_id)
-            return 0
-
         for tdict in torrents:
-            exists = self.db.query(Topic).get(tdict['id'])
+            with session_scope() as db:
+                exists = db.query(Topic).get(tdict['id'])
 
             # Skip torrents that are already in database
             if exists:
@@ -415,16 +385,18 @@ class Manager(object):
 
             tdict['new'] = True
             try:
-                added += self.process_topic(tdict['id'], tdict, user)
-                self.db.commit()
+                added += self.process_pending_topic(tdict)
+
             except TopicException:
                 _logger.debug('Failed to add topic %d', tdict['id'])
 
-            if not user.can_download():
-                user = self.select_user()
-
             if added == count:
                 break
+
+        with session_scope() as db:
+            category = find_category(forum_id, True)
+            category.skip = bool(added)
+            db.add(category)
 
         return added
 
@@ -434,20 +406,26 @@ class Manager(object):
         """
         today = datetime.datetime.utcnow().date()
         week = (datetime.datetime.utcnow() - datetime.timedelta(days)).date()
-        num_downloads = self.db.query(func.count(Torrent.id)) \
-            .join(Topic) \
-            .filter(func.date(Topic.updated_at) >= week) \
-            .filter(func.date(Topic.updated_at) < today) \
-            .scalar()
+        with session_scope() as db:
+            num_downloads = (
+                db.query(func.count(Torrent.id))
+                .join(Topic)
+                .filter(func.date(Topic.updated_at) >= week)
+                .filter(func.date(Topic.updated_at) < today)
+                .scalar()
+            )
 
-        daily_slots = self.db.query(func.sum(User.downloads_limit)) \
-            .filter(User.enabled) \
-            .scalar()
+            daily_slots = (
+                db.query(func.sum(User.downloads_limit))
+                .filter(User.enabled)
+                .scalar()
+            )
 
-        slots_left_today = self.db.query(
-            func.sum(User.downloads_limit - User.downloads_today)) \
-            .filter(User.enabled) \
-            .scalar()
+            slots_left_today = (
+                db.query(func.sum(User.downloads_limit - User.downloads_today))
+                .filter(User.enabled)
+                .scalar()
+            )
 
         estimate = daily_slots - (num_downloads / days)
 
@@ -463,3 +441,77 @@ class Manager(object):
         dlslots = self.estimate_free_download_slots()
         _logger.info("Going to download %d torrents", dlslots)
         self.populate_categories(KEEP_TORRENTS_MIN, dlslots)
+
+
+def select_user(with_dlslots=True):
+    """
+    Select one random user, if can_download is true then user must have
+    download slots available
+    :returns User
+    """
+    with session_scope() as db:
+        try:
+            query = db.query(User).filter(User.enabled.is_(True))
+
+            if with_dlslots:
+                query = query.filter(or_(
+                    User.downloads_limit > User.downloads_today,
+                    User.downloads_limit.is_(None)
+                ))
+
+            user = query.order_by(func.random()).limit(1).one()
+
+        except NoResultFound:
+            raise OperationInterruptedException('No suitable users found')
+        else:
+            db.expunge(user)
+
+    return user
+
+
+def load_topics(ids):
+    """
+    Loads existing topics from database
+    :returns dict(topic_id: infohash)
+    """
+    topics = dict()
+    with session_scope() as db:
+        existing = (
+            db.query(Topic)
+            .options(joinedload(Topic.torrent))
+            .filter(Topic.id.in_(ids))
+            .all()
+        )
+        for t in existing:
+            topics[t.id] = t.torrent.infohash if t.torrent else None
+
+    return topics
+
+
+def save_topic(tid, category_id, updated_at, title):
+    """
+    Insert or update topic.
+    """
+    topic = Topic(
+        id=tid,
+        category_id=category_id,
+        title=title,
+        updated_at=updated_at
+    )
+
+    _logger.debug('Saving topic %s', topic)
+    with session_scope() as db:
+        topic = db.merge(topic)
+        db.commit()
+
+
+def find_category(tracker_id, is_subforum):
+    with session_scope() as db:
+        category = (
+            db.query(Category).filter(
+                Category.tracker_id == tracker_id,
+                Category.is_subforum == is_subforum
+            ).first()
+        )
+        db.expunge_all()
+    return category

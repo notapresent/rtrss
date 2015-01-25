@@ -9,28 +9,24 @@ import schedule
 import pytz
 import tzlocal
 
-from rtrss.exceptions import OperationInterruptedException
-from rtrss.manager import Manager
-from rtrss.database import session_scope
+import rtrss.manager as manager
 
 
 
-# Feed update interval, minutes
+
+# Update task interval, minutes
 UPDATE_INTERVAL = 10
 
-# Database cleanup interval, minutes
+# Cleanup task interval, minutes
 CLEANUP_INTERVAL = 60
 
-# Perform daily maintenance at this time
+# Perform daily maintenance task at this time
 DAILY_MAINTENANCE_TIME = '00:01'
 
-# Do not run update when current time is that close to midnight, minutes
-SAFETY_WINDOW_SIZE = 15
+# Do not run update task when current time is that close to midnight, minutes
+SAFETY_WINDOW_SIZE = 10
 
-# Perform daily maintenance at this time
-DAILY_MAINTENANCE_TIME = '00:01'
-
-# Run "populate" task at this time
+# Run populate categories task at this time
 DAILY_POPULATE_TIME = '05:00'
 
 _logger = logging.getLogger(__name__)
@@ -83,17 +79,12 @@ class Scheduler(object):
         self._sched.every().day.at(localtime.strftime('%H:%M')) \
             .do(self.run_task, 'daily_populate_task')
 
-    def run_task(self, task_name):
+    def run_task(self, task_name, *args, **kwargs):
         if task_name == 'update' and self.is_safety_window():
             _logger.debug('Safety window, skipping update')
             return
-
-        with session_scope() as session:
-            manager = Manager(self.config, session)
-            try:
-                getattr(manager, task_name)()
-            except OperationInterruptedException as e:
-                _logger.warn(str(e))
+        mgr = manager.Manager(self.config)
+        mgr.run_task(task_name, *args, **kwargs)
 
     def is_safety_window(self):
         win = timedelta(minutes=SAFETY_WINDOW_SIZE)

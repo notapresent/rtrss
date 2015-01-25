@@ -11,6 +11,11 @@ class CaptchaRequiredException(Exception):
     pass
 
 
+class DownloadLimitException(Exception):
+    """Raised if user exceeds torrent download quota"""
+    pass
+
+
 class ItemProcessingFailedException(Exception):
     """
     Raised if processing topic/forum/category failed but execution may continue

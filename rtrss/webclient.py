@@ -7,7 +7,8 @@ from requests.utils import cookiejar_from_dict, dict_from_cookiejar
 
 from rtrss.util import save_debug_file
 from rtrss.exceptions import (OperationInterruptedException,
-                              CaptchaRequiredException, TorrentFileException)
+                              CaptchaRequiredException, TorrentFileException,
+                              DownloadLimitException)
 
 
 FEED_URL = 'http://feed.{host}/atom/f/{category_id}.atom'
@@ -41,13 +42,13 @@ MAINTENANCE_MSG = u'Форум временно отключен на профи
 _logger = logging.getLogger(__name__)
 
 
-def is_text_responce(response):
+def is_text_response(response):
     return 'text' in response.headers.get('content-type', '')
 
 
-def detect_encoding(response):
-    cp1251 = '<meta charset="windows-1251">'
-    if is_text_responce(response) and cp1251 in response.content:
+def detect_cp1251_encoding(response):
+    cp1251_marker = '<meta charset="windows-1251">'
+    if is_text_response(response) and cp1251_marker in response.content:
         return 'windows-1251'
     else:
         return response.encoding
@@ -74,11 +75,11 @@ class WebClient(object):
             _logger.warn('Request failed: %s', e)
             raise OperationInterruptedException(str(e))
 
-        response.is_text = is_text_responce(response)
+        response.is_text = is_text_response(response)
 
         # Detect windows-1251 encoding
         if response.is_text:
-            response.encoding = detect_encoding(response)
+            response.encoding = detect_cp1251_encoding(response)
 
         if response.is_text and MAINTENANCE_MSG in response.text:
             raise OperationInterruptedException('Tracker maintenance')
@@ -130,7 +131,7 @@ class WebClient(object):
                     self.user.id, torrent_id)
                 save_debug_file(filename, response.content)
 
-            raise CaptchaRequiredException(msg)
+            raise DownloadLimitException(msg)
 
         msg = '{} failed to download torrent {} @ {}'.format(
             self.user, torrent_id, url)

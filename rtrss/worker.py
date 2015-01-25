@@ -101,9 +101,8 @@ def worker_action(action):
         sched = scheduler.Scheduler(config)
         return sched.run()
     else:
-        with database.session_scope(database.Session) as db:
-            mgr = manager.Manager(config, db)
-            return getattr(mgr, action)()
+        mgr = manager.Manager(config)
+        mgr.run_task(action)
 
 
 def db_action(action):
@@ -142,7 +141,7 @@ def make_argparser():
     wp.add_argument(
         'action',
         help='Action to perform',
-        choices=['run', 'update', 'import_categories', 'populate_categories']
+        choices=['run', 'update', 'sync_categories', 'populate_categories']
     )
     wp.set_defaults(func=worker_action)
 
