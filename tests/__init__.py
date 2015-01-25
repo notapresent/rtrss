@@ -8,7 +8,7 @@ DB_URL = 'postgresql://postgres:postgres@localhost/rtrss_test'
 
 
 class AttrDict(dict):
-    '''Class to make mock config objects'''
+    """Class to make mock objects"""
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
