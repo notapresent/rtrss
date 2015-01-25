@@ -21,6 +21,7 @@ from rtrss.database import session_scope
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -320,8 +321,8 @@ class Manager(object):
             )
             db.expunge_all()
 
-        _logger.debug(
-            'Found %d categories with less than %d torrents',
+        _logger.info(
+            'Populate task found %d categories with less than %d torrents',
             len(categories),
             count
         )
@@ -347,16 +348,18 @@ class Manager(object):
 
             added = self.populate_category(cat.tracker_id, to_add)
             total_added += added
-            _logger.info('Added %d torrents to %s ', added, cat.title)
+            _logger.debug('Added %d torrents to %s ', added, cat.title)
 
             if total_added >= total:
                 break
 
-        _logger.info(
-            'Added %d torrents', total_added)
+        _logger.info('Populate task added %d torrents', total_added)
 
     def populate_category(self, forum_id, count):
-        """Add count torrents from subforum forum_id"""
+        """
+        Add count torrents from subforum forum_id
+        :returns int Number of torrents added
+        """
         scraper = Scraper(self.config)
         user = select_user()
         try:
@@ -400,46 +403,9 @@ class Manager(object):
 
         return added
 
-    def estimate_free_download_slots(self, days=7):
-        """Calculates estimated download slots available based on number
-        of torrents, downloaded each day during past week
-        """
-        today = datetime.datetime.utcnow().date()
-        week = (datetime.datetime.utcnow() - datetime.timedelta(days)).date()
-        with session_scope() as db:
-            num_downloads = (
-                db.query(func.count(Torrent.id))
-                .join(Topic)
-                .filter(func.date(Topic.updated_at) >= week)
-                .filter(func.date(Topic.updated_at) < today)
-                .scalar()
-            )
-
-            daily_slots = (
-                db.query(func.sum(User.downloads_limit))
-                .filter(User.enabled)
-                .scalar()
-            )
-
-            slots_left_today = (
-                db.query(func.sum(User.downloads_limit - User.downloads_today))
-                .filter(User.enabled)
-                .scalar()
-            )
-
-        estimate = daily_slots - (num_downloads / days)
-
-        if estimate > slots_left_today:
-            estimate = slots_left_today
-
-        if estimate > 1000:
-            estimate = 1000
-
-        return int(estimate * 0.9)
-
     def daily_populate_task(self):
-        dlslots = self.estimate_free_download_slots()
-        _logger.info("Going to download %d torrents", dlslots)
+        dlslots = estimate_free_download_slots()
+        _logger.info("Daily populate going to download %d torrents", dlslots)
         self.populate_categories(KEEP_TORRENTS_MIN, dlslots)
 
 
@@ -515,3 +481,41 @@ def find_category(tracker_id, is_subforum):
         )
         db.expunge_all()
     return category
+
+
+def estimate_free_download_slots(days=7):
+    """Calculates estimated download slots available based on number
+    of torrents, downloaded each day during past week
+    """
+    today = datetime.datetime.utcnow().date()
+    week = (datetime.datetime.utcnow() - datetime.timedelta(days)).date()
+    with session_scope() as db:
+        num_downloads = (
+            db.query(func.count(Torrent.id))
+            .join(Topic)
+            .filter(func.date(Topic.updated_at) >= week)
+            .filter(func.date(Topic.updated_at) < today)
+            .scalar()
+        )
+
+        daily_slots = (
+            db.query(func.sum(User.downloads_limit))
+            .filter(User.enabled)
+            .scalar()
+        )
+
+        slots_left_today = (
+            db.query(func.sum(User.downloads_limit - User.downloads_today))
+            .filter(User.enabled)
+            .scalar()
+        )
+
+    estimate = daily_slots - (num_downloads / days)
+
+    if estimate > slots_left_today:
+        estimate = slots_left_today
+
+    if estimate > 1000:
+        estimate = 1000
+
+    return int(estimate * 0.9)
