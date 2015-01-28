@@ -30,7 +30,6 @@ GCS_PRIVATEKEY_URL = os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')
 TORRENT_PATH_PATTERN = 'torrents/{}.torrent'
 
 if 'OPENSHIFT_APP_DNS' in os.environ:       # production
-    SERVER_NAME = os.environ.get('OPENSHIFT_APP_DNS')
     PORT = int(os.environ.get('OPENSHIFT_PYTHON_PORT', 8080))
     IP = os.environ.get('OPENSHIFT_PYTHON_IP', '0.0.0.0')
 

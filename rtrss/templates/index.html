@@ -8,7 +8,8 @@
 
 <ul>
 {% for item in tree.children recursive %}
-    <li><a href="{{ url_for('feed', category_id=item.id) }}">{{ item.title }}</a>
+    <li><a href="{{ url_for('feed', category_id=item.id, _external=True) }}">{{
+        item.title }}</a>
     {%- if item.children %}
         <ul class="submenu">{{ loop(item.children) }}</ul>
     {% endif -%}</li>
