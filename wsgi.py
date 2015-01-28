@@ -1,19 +1,23 @@
 #!/usr/bin/python
 import os
-from rtrss import config
-
 
 if os.environ.get('OPENSHIFT_PYTHON_DIR'):      # on Openshift
     virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR') + '/virtenv/'
     virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
-    try:
-        execfile(virtualenv, dict(__file__=virtualenv))
-    except IOError:
-        pass
+    execfile(virtualenv, dict(__file__=virtualenv))
+
 #
 # IMPORTANT: Put any additional includes below this line.  If placed above this
 # line, it's possible required libraries won't be in your searchable path
 #
+
+from rtrss import config
+
+# Run new relic agent if we have license key
+if 'NEW_RELIC_LICENSE_KEY' in os.environ:
+    import newrelic.agent
+
+    newrelic.agent.initialize()
 
 from rtrss.webapp import app as application
 
