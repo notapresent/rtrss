@@ -3,11 +3,14 @@ import os
 import datetime
 import rfc822
 
-from flask import Flask, send_from_directory, render_template, make_response
+from flask import (Flask, send_from_directory, render_template, make_response,
+                   abort)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import orm, func
 
 from rtrss.models import Topic, Category, Torrent
+from rtrss.filestorage import make_storage
+from rtrss import config
 
 
 app = Flask(__name__)
@@ -26,7 +29,18 @@ def index():
 
 @app.route('/torrent/<int:torrent_id>')
 def torrent(torrent_id):
-    pass
+    # TODO add user passkey support
+    storage = make_storage(config)
+    torrentfile = storage.get(config.TORRENT_PATH_PATTERN.format(torrent_id))
+
+    if torrentfile:
+        fn = '{}.torrent'.format(torrent_id)
+        resp = make_response(torrentfile)
+        resp.headers['Content-Type'] = 'application/x-bittorrent'
+        resp.headers['Content-Disposition'] = 'attachment; filename=' + fn
+        return resp
+    else:
+        abort(404)
 
 
 @app.route('/feed/', defaults={'category_id': 0})
@@ -166,7 +180,6 @@ def category_link(category, tracker_host):
 
 
 def make_category_tree():
-    # TODO show only categories with torrents
     categories = category_list()
 
     tree = dict({

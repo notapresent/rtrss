@@ -24,6 +24,8 @@ from rtrss.database import session_scope
 
 
 
+
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -242,7 +244,7 @@ class Manager(object):
         with session_scope() as db:
             db.merge(torrent)
 
-        filename = 'torrents/{}.torrent'.format(tid)
+        filename = self.config.TORRENT_PATH_PATTERN.format(tid)
 
         if old_infohash:
             self.storage.delete(filename)
