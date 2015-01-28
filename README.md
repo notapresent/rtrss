@@ -55,4 +55,4 @@ Production deployment on [Openshift](https://www.openshift.com/)
 6. Activate virtualenv environment: `source "$OPENSHIFT_HOMEDIR/python/virtenv/bin/activate"`
 7. Initialize database: `rtrssmgr db init'`
 8. Add user accounts
-9. TODO
+9. Import categories from tracker: rtrssmgr worker sync_categories
