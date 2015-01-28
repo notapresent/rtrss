@@ -1,10 +1,11 @@
-'''File storage for torrent files, with several backends'''
+"""File storage for torrent files, with several backends"""
 import urlparse
+
 from rtrss.filestorage import googlecloudstorage, localdirectorystorage
 
 
 def make_storage(config):
-    '''Return file storage based on url scheme'''
+    """Return file storage based on url scheme"""
     uri = config.FILESTORAGE_URL
     parsed = urlparse.urlparse(uri)
 

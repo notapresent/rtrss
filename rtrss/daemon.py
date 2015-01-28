@@ -30,7 +30,7 @@ class WorkerDaemon(BaseDaemon):
 
 
 def make_daemon(config):
-    '''Returns WorkerDaemon instance'''
+    """Returns WorkerDaemon instance"""
     pidfile = os.path.join(config.DATA_DIR, 'daemon.pid')
     logdir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
     logfile = os.path.join(logdir, 'daemon.log')

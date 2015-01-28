@@ -43,4 +43,3 @@ else:       # Local dev environment
     SERVER_NAME = 'localhost:8080'
     PORT = 8080
     IP = '0.0.0.0'
-

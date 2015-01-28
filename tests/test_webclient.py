@@ -29,4 +29,3 @@ class WebClientTestCase(unittest.TestCase):
         })
         encoding = webclient.detect_cp1251_encoding(response)
         self.assertEqual(encoding, 'windows-1251')
-

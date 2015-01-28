@@ -41,6 +41,7 @@ def mkdir_p(path):
         else:
             raise
 
+
 def ensure_dir(dirname):
     """Check if file directory exists, create if it doesn't"""
     if not path.exists(dirname):

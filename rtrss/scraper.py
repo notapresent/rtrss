@@ -103,7 +103,6 @@ class Scraper(object):
             msg = 'Failed to parse categories in topic {}: {}'.format(tid, src)
             raise TopicException(msg)
 
-
         return dict({
             'infohash': infohash,
             'categories': categories
@@ -173,7 +172,7 @@ class Scraper(object):
         return torrent_dict
 
     def get_forum_ids(self, user):
-        '''Return list of ids for all forums found in tracker map'''
+        """Return list of ids for all forums found in tracker map"""
         wc = WebClient(self.config, user)
         html = wc.get_category_map()
         return self.parse_category_map(html)

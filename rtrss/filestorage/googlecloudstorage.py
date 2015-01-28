@@ -1,17 +1,20 @@
-'''
+"""
 Torrent file storage using Google Cloud Storage
-'''
+"""
 import os
 import logging
-import httplib2
 import io
 import urlparse
-import requests
 import hashlib
+
+import httplib2
+import requests
 from oauth2client.client import GoogleCredentials
 from googleapiclient import discovery, http
 from googleapiclient.errors import HttpError
+
 from rtrss.filestorage.httputil import retry_on_exception
+
 
 _logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ _credentials = None
 
 @retry_on_exception()
 def download_and_save_keyfile(keyfile_url, keyfile_path):
-    '''Download private key file and store it or raise an exception'''
+    """Download private key file and store it or raise an exception"""
     if os.path.isfile(keyfile_path):    # Keyfile already saved
         return
 
@@ -41,7 +44,7 @@ def download_and_save_keyfile(keyfile_url, keyfile_path):
 
 
 def _init_credentials(keyfile_path):
-    '''Initialize credentials object'''
+    """Initialize credentials object"""
     global _credentials
     _credentials = GoogleCredentials.from_stream(keyfile_path)\
         .create_scoped(SCOPES)
@@ -49,7 +52,7 @@ def _init_credentials(keyfile_path):
 
 
 def parse_fsurl(url):
-    '''Parse filestorage URL and return bucket name and optional prefix '''
+    """Parse filestorage URL and return bucket name and optional prefix """
     parsed = urlparse.urlparse(url)
     return (parsed.netloc, parsed.path.lstrip('/'))
 
@@ -84,15 +87,15 @@ class GCSFileStorage(object):
 
     @retry_on_exception()
     def ensure_bucket(self, bucket_name):
-        '''Ensure storage bucket exists'''
+        """Ensure storage bucket exists"""
         self.client.buckets().get(bucket=bucket_name).execute()
         _logger.info('Bucket {} ready'.format(bucket_name))
 
     @retry_on_exception()
     def get(self, key):
-        '''
+        """
         Get file from storage. Returns file contents of None if file not exists
-        '''
+        """
         # Get Payload Data
         req = self.client.objects()\
             .get_media(bucket=self.bucket_name, object=self.prefix + key)
@@ -117,7 +120,7 @@ class GCSFileStorage(object):
 
     @retry_on_exception()
     def put(self, key, contents, mimetype='application/octet-stream'):
-        '''Put file into storage, possibly overwriting it'''
+        """Put file into storage, possibly overwriting it"""
         # The BytesIO object may be replaced with any io.Base instance.
         media = http.MediaIoBaseUpload(
             io.BytesIO(contents),
@@ -131,7 +134,7 @@ class GCSFileStorage(object):
 
     @retry_on_exception()
     def delete(self, key):
-        '''Delete file from storage'''
+        """Delete file from storage"""
         self.client.objects()\
             .delete(bucket=self.bucket_name, object=self.prefix + key)\
             .execute()

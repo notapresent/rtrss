@@ -13,7 +13,6 @@ import rtrss.manager as manager
 
 
 
-
 # Update task interval, minutes
 UPDATE_INTERVAL = 10
 

@@ -18,6 +18,7 @@ def save_debug_file(filename, contents):
     with open(filename, 'w') as f:
         f.write(contents)
 
+
 def import_users(filename):
     """Import user account from CSV file, skipping existing users"""
     with open(filename) as csvfile:

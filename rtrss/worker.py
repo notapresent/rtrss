@@ -58,7 +58,7 @@ def _setup_logging():
     file_handler.setLevel(config.LOGLEVEL)
     rootlogger.addHandler(file_handler)
     _logger.debug('Logging to %s with loglevel %s initialized',
-                 filename, logging.getLevelName(config.LOGLEVEL))
+                  filename, logging.getLevelName(config.LOGLEVEL))
 
     # TODO external logging service handler here
     # TODO warning & error notifications with SMTPHandler

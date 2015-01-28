@@ -1,7 +1,9 @@
 import logging
 import time
+
 import requests
 from googleapiclient.errors import HttpError
+
 
 # Number of retries in case of API errors
 NUM_RETRIES = 3
@@ -14,7 +16,7 @@ _logger = logging.getLogger(__name__)
 
 def is_retryable(exc):
     retryable_codes = [500, 502, 503, 504]
-    '''Returns True if exception is "retryable", eg. HTTP 503'''
+    """Returns True if exception is "retryable", eg. HTTP 503"""
     if issubclass(exc, requests.exceptions.RequestException):
         code = exc.response.status_code
     elif issubclass(exc, HttpError):
@@ -29,7 +31,7 @@ def retry_on_exception(
         retryable=is_retryable,
         tries=NUM_RETRIES,
         delay=RETRY_DELAY):
-    '''Retry call if function raises retryable exception'''
+    """Retry call if function raises retryable exception"""
     def wrap(f):
         def wrapped_f(*args, **kwargs):
             mtries = tries

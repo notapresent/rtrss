@@ -21,11 +21,6 @@ from rtrss.database import session_scope
 
 
 
-
-
-
-
-
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -321,9 +316,11 @@ class Manager(object):
             print query
             categories = query.all()
             db.expunge_all()
-        message = 'Found {} categories with <{} torrents, ' \
-                  'going to download up to {} torrents'.format(
-            len(categories), count, total
+
+        message = (
+            'Found {} categories with <{} torrents, '
+            'going to download up to {} torrents'
+            .format(len(categories), count, total)
         )
         _logger.info(message)
 
