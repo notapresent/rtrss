@@ -2,17 +2,21 @@
 import os
 import datetime
 import rfc822
+
 from flask import Flask, send_from_directory, render_template, make_response
 from flask_sqlalchemy import SQLAlchemy
-from rtrss.models import Topic, User, Category, Torrent
-from rtrss.filestorage import make_storage
+from sqlalchemy import orm, func
+
+from rtrss.models import Topic, Category, Torrent
+
 
 app = Flask(__name__)
 app.config.from_object('rtrss.config')
 db = SQLAlchemy(app)
 
-MIN_TTL = 30    # minutes
+MIN_TTL = 30  # minutes
 MAX_TTL = 1440  # 1 day
+
 
 @app.route('/')
 def index():
@@ -23,6 +27,7 @@ def index():
 @app.route('/torrent/<int:torrent_id>')
 def torrent(torrent_id):
     pass
+
 
 @app.route('/feed/', defaults={'category_id': 0})
 @app.route('/feed/<int:category_id>')
@@ -38,15 +43,17 @@ def feed(category_id=0):
     response.headers['content-type'] = 'application/rss+xml; charset=UTF-8'
     return response
 
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(
         os.path.join(app.root_path, 'static'),
         'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+
 @app.before_first_request
 def setup():
-    pass    # TODO cache warmup etc
+    pass  # TODO cache warmup etc
 
 
 def get_feed_data(category_id):
@@ -96,6 +103,11 @@ def calculate_ttl(deltas):
     Calculations are based on median time delta between items and the number of
     items. Accepts a list if time deltas.
     """
+
+    # Feed with only 1 item
+    if len(deltas) == 0:
+        return MAX_TTL
+
     def median(lst):
         lst.sort()
         length = len(lst)
@@ -107,7 +119,7 @@ def calculate_ttl(deltas):
 
     median_delta = median(deltas)
     ttl = median_delta * (len(deltas) + 1) / 2
-    ttl = min(max(ttl, MIN_TTL), MAX_TTL)   # Ensure MIN_TTL <= ttl <= MAX_TTL
+    ttl = min(max(ttl, MIN_TTL), MAX_TTL)  # Ensure MIN_TTL <= ttl <= MAX_TTL
     return ttl
 
 
@@ -118,8 +130,8 @@ def datetime_to_rfc822(the_time):
 
 def get_subcategories(parent_ids):
     """Returns list of all subcategory ids"""
-    subcategories = db.session.query(Category.id)\
-        .filter(Category.parent_id.in_(parent_ids))\
+    subcategories = db.session.query(Category.id) \
+        .filter(Category.parent_id.in_(parent_ids)) \
         .all()
 
     children = [cat_id for (cat_id, ) in subcategories]
@@ -136,9 +148,7 @@ def get_feed_items(category_ids=None):
     else:
         limit = 25
 
-    query = db.session.query(Topic)\
-        .join(Torrent)\
-
+    query = db.session.query(Topic).join(Torrent)
 
     if category_ids:
         query = query.filter(Topic.category_id.in_(category_ids))
@@ -154,16 +164,10 @@ def category_link(category, tracker_host):
         return "http://{host}/forum/index.php?c={cid}".format(
             host=tracker_host, cid=category.tracker_id)
 
+
 def make_category_tree():
     # TODO show only categories with torrents
-    categories = (
-        db.session.query(Category)
-        .filter(Category.id > 0)
-        .order_by(Category.is_subforum)
-        .order_by(Category.parent_id)
-        .order_by(Category.tracker_id)
-        .all()
-    )
+    categories = category_list()
 
     tree = dict({
         'id': 0,
@@ -185,6 +189,52 @@ def make_category_tree():
         childmap[category.parent_id].append(catdict)
 
     return tree
+
+
+def category_list(return_empty=False):
+    """Returns category list with torrent count for each category"""
+    q = db.session
+    print
+    top = (
+        orm.query.Query(
+            [Category.id.label('root_id'), Category.id.label('id')]
+        )
+        .cte('descendants', recursive=True)
+    )
+
+    descendants = (
+        top.union_all(
+            orm.query.Query([top.c.root_id, Category.id])
+            .filter(Category.parent_id == top.c.id))
+    )
+
+    tc = (
+        q.query(Topic.category_id, Torrent.id)
+        .join(Torrent, Torrent.id == Topic.id)
+        .subquery(name='tc')
+    )
+
+    tcc = (
+        q.query(descendants.c.root_id, func.count(tc.c.id).label('cnt'))
+        .filter(descendants.c.id == tc.c.category_id)
+        .group_by(descendants.c.root_id)
+        .subquery(name='tcc')
+    )
+
+    outer = (
+        q.query(Category.id, Category.parent_id, Category.title, tcc.c.cnt)
+        .outerjoin(tcc, tcc.c.root_id == Category.id)
+        .filter(Category.id > 0)
+        .order_by(Category.is_subforum)
+        .order_by(Category.parent_id)
+        .order_by(Category.tracker_id)
+    )
+
+    if not return_empty:
+        outer = outer.filter(tcc.c.cnt > 0)
+
+    return outer.all()
+
 
 if __name__ == '__main__':
     app.run(app.config['IP'], app.config['PORT'], debug=True)
