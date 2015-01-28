@@ -22,9 +22,6 @@ class Category(Base):
     is_subforum = Column(Boolean, nullable=False, default=True)
     parent_id = Column(Integer, ForeignKey('categories.id'))
 
-    # Skip this category during initial categories population
-    skip = Column(Boolean, nullable=True)
-
     title = Column(String(500), nullable=False)
 
     __table_args__ = (

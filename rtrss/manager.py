@@ -22,6 +22,8 @@ from rtrss.database import session_scope
 
 
 
+
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -47,11 +49,10 @@ class Manager(object):
         """Run task, catching all exceptions"""
         try:
             getattr(self, task_name)(*args, **kwargs)
-        except ZeroDivisionError:
-            raise
-            # except OperationInterruptedException as e:
-            # _logger.warn("Operation interrupted: {}".format(str(e)))
-            # except Exception as e:    # TODO better error message and stacktrace
+        except OperationInterruptedException as e:
+            _logger.warn("Operation interrupted: {}".format(str(e)))
+            # TODO better error message and stacktrace
+            # except Exception as e:
             # _logger.error("%s %s", type(e), str(e))
 
     def update(self):
@@ -138,7 +139,7 @@ class Manager(object):
 
         # Torrent new or changed
         if is_new_topic or old_infohash != infohash:
-            self.process_torrent(tid, infohash, old_infohash)  # FIXME
+            self.process_torrent(tid, infohash, old_infohash)
 
         return 1
 
@@ -174,7 +175,6 @@ class Manager(object):
             is_subforum=c_dict['is_subforum'],
             title=c_dict['title'],
             parent_id=parent_id,
-            skip=c_dict.get('skip')
         )
 
         with session_scope() as db:
@@ -276,7 +276,6 @@ class Manager(object):
                     parent_id=None,
                     tracker_id=0,
                     is_subforum=False,
-                    skip=True
                 )
                 db.add(root)
 
@@ -308,24 +307,23 @@ class Manager(object):
         torrents, no more than total torrents
         """
         with session_scope() as db:
-            categories = (
+            query = (
                 db.query(Category, func.count(Torrent.id))
                 .outerjoin(Topic)
                 .outerjoin(Torrent)
                 .filter(Category.is_subforum)
-                .filter(Category.skip.isnot(True))
                 .group_by(Category.id)
                 .having(func.count(Torrent.id) < count)
                 .order_by(Category.id)
-                .all()
             )
+            print query
+            categories = query.all()
             db.expunge_all()
-
-        _logger.info(
-            'Populate task found %d categories with less than %d torrents',
-            len(categories),
-            count
+        message = 'Found {} categories with <{} torrents, ' \
+                  'going to download up to {} torrents'.format(
+            len(categories), count, total
         )
+        _logger.info(message)
 
         if not len(categories):
             return
@@ -396,16 +394,11 @@ class Manager(object):
             if added == count:
                 break
 
-        with session_scope() as db:
-            category = find_category(forum_id, True)
-            category.skip = bool(added)
-            db.add(category)
-
         return added
 
     def daily_populate_task(self):
         dlslots = estimate_free_download_slots()
-        _logger.info("Daily populate going to download %d torrents", dlslots)
+        # _logger.info("Daily populate going to download %d torrents", dlslots)
         self.populate_categories(KEEP_TORRENTS_MIN, dlslots)
 
 
