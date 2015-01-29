@@ -22,7 +22,7 @@ PROPAGATE_EXCEPTIONS = True
 LOGLEVEL = logging.INFO
 
 LOG_FORMAT_BRIEF = ('%(asctime)s %(levelname)s %(name)s %(message)s '
-                    '[in %(pathname)s:%(lineno)d]')
+                    '[%(pathname)s:%(lineno)d]')
 LOG_FORMAT_FULL = '''
 Message type:       %(levelname)s
 Location:           %(pathname)s:%(lineno)d
