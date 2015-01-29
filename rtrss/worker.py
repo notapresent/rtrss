@@ -141,7 +141,7 @@ def make_argparser():
         prog='rtrssmgr',
         description='RTRSS worker command line interface'
     )
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='subparser_name')
 
     wp = subparsers.add_parser(
         'worker',
@@ -182,5 +182,9 @@ def main():
     """Worker entry point"""
     args = make_argparser().parse_args()
     app_init()
+
+    if args.subparser_name != 'daemon':
+        setup_external_logging()
+
     args.func(args.action)
     app_teardown()
