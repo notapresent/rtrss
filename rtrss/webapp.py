@@ -212,7 +212,6 @@ def make_category_tree():
 def category_list(return_empty=False):
     """Returns category list with torrent count for each category"""
     q = db.session
-    print
     top = (
         orm.query.Query(
             [Category.id.label('root_id'), Category.id.label('id')]
