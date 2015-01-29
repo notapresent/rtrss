@@ -37,6 +37,9 @@ Message:
 
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 
+ADMIN_LOGIN = os.environ.get('ADMIN_LOGIN', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
+
 # Settings for torrent file storage
 _default_fsurl = 'file://{}'.format(DATA_DIR)
 FILESTORAGE_URL = os.environ.get('RTRSS_FILESTORAGE_URL', _default_fsurl)
@@ -58,3 +61,4 @@ else:       # Local dev environment
     SERVER_NAME = 'localhost:8080'
     PORT = 8080
     IP = '0.0.0.0'
+

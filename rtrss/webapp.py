@@ -4,10 +4,11 @@ import datetime
 import rfc822
 import logging
 from logging.handlers import RotatingFileHandler
+from functools import wraps
 
 from logentries import LogentriesHandler
 from flask import (Flask, send_from_directory, render_template, make_response,
-                   abort)
+                   abort, Response, request)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import orm, func
 
@@ -73,13 +74,42 @@ def ping():
     return "Alive: {}".format(datetime.datetime.utcnow().isoformat())
 
 
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html', env=os.environ)
-
 @app.before_first_request
 def setup():
     pass  # TODO cache warmup etc
+
+
+def check_auth(username, password):
+    """
+    This function is called to check if a username/password combination is valid
+    """
+    return (username == app.config['ADMIN_LOGIN']
+            and password == app.config['ADMIN_PASSWORD'])
+
+
+def authenticate():
+    """Sends a 401 response that enables basic auth"""
+    return Response(
+        'Could not verify your access level for that URL.\n'
+        'You have to login with proper credentials', 401,
+        {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+@app.route('/dashboard')
+@requires_auth
+def dashboard():
+    return render_template('dashboard.html', env=os.environ)
 
 
 def get_feed_data(category_id):
