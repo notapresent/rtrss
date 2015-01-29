@@ -16,7 +16,7 @@ if 'NEW_RELIC_LICENSE_KEY' in os.environ:
     import newrelic.agent
     newrelic.agent.initialize()
 
-from rtrss.webapp2 import app as application
+from rtrss.webapp import app as application
 
 #
 # Below for testing only
