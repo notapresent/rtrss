@@ -282,8 +282,8 @@ def setup_logging():
     app.logger.debug('Logging to %s with loglevel %s initialized',
                      filename, logging.getLevelName(config.LOGLEVEL))
 
-    if 'LOGENTRIES_TOKEN' in os.environ:
-        token = os.environ['LOGENTRIES_TOKEN']
+    if 'LOGENTRIES_TOKEN_WEBAPP' in os.environ:
+        token = os.environ['LOGENTRIES_TOKEN_WEBAPP']
         from logentries import LogentriesHandler
 
         logentries_handler = LogentriesHandler(token)
@@ -296,6 +296,7 @@ def setup_logging():
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('newrelic').setLevel(logging.WARNING)
 
 
 setup_logging()
