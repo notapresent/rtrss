@@ -33,5 +33,5 @@ def make_daemon(config):
     """Returns WorkerDaemon instance"""
     pidfile = os.path.join(config.DATA_DIR, 'daemon.pid')
     logdir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
-    logfile = os.path.join(logdir, 'daemon.log')
+    logfile = os.path.join(logdir, 'debug.log')
     return WorkerDaemon(pidfile, stdout=logfile, stderr=logfile)
