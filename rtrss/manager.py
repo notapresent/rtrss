@@ -21,6 +21,7 @@ from rtrss.database import session_scope
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -313,7 +314,7 @@ class Manager(object):
                 .having(func.count(Torrent.id) < count)
                 .order_by(Category.id)
             )
-            print query
+
             categories = query.all()
             db.expunge_all()
 
