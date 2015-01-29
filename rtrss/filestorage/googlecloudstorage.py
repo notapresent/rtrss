@@ -48,7 +48,7 @@ def _init_credentials(keyfile_path):
     global _credentials
     _credentials = GoogleCredentials.from_stream(keyfile_path)\
         .create_scoped(SCOPES)
-    _logger.info('GCS storage credentials creatd')
+    _logger.debug('GCS storage credentials created')
 
 
 def parse_fsurl(url):
@@ -75,13 +75,13 @@ class GCSFileStorage(object):
             return self._client
         else:
             httpclient = _credentials.authorize(httplib2.Http())
-            _logger.info('Service authorization completed')
+            _logger.debug('Service authorization completed')
             self._client = discovery.build(
                 'storage',
                 API_VERSION,
                 http=httpclient
             )
-            _logger.info('API servive client created')
+            _logger.debug('API servive client created')
             self.ensure_bucket(self.bucket_name)
             return self._client
 
@@ -89,7 +89,7 @@ class GCSFileStorage(object):
     def ensure_bucket(self, bucket_name):
         """Ensure storage bucket exists"""
         self.client.buckets().get(bucket=bucket_name).execute()
-        _logger.info('Bucket {} ready'.format(bucket_name))
+        _logger.debug('Bucket {} ready'.format(bucket_name))
 
     @retry_on_exception()
     def get(self, key):
