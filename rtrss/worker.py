@@ -60,8 +60,13 @@ def _setup_logging():
     _logger.debug('Logging to %s with loglevel %s initialized',
                   filename, logging.getLevelName(config.LOGLEVEL))
 
-    # TODO external logging service handler here
-    # TODO warning & error notifications with SMTPHandler
+    if 'LOGENTRIES_TOKEN' in os.environ:
+        token = os.environ['LOGENTRIES_TOKEN']
+        from logentries import LogentriesHandler
+
+        logentries_handler = LogentriesHandler(token)
+        logentries_handler.setLevel(logging.DEBUG)
+        rootlogger.addHandler(logentries_handler)
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
