@@ -298,9 +298,10 @@ def setup_logging():
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
+    logging.getLogger('newrelic').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
     # Do not log web requests
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
-    logging.getLogger('newrelic').setLevel(logging.WARNING)
 
 
 setup_logging()
