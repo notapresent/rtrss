@@ -12,8 +12,6 @@ from rtrss import manager
 from rtrss.daemon import make_daemon
 
 
-LOG_FORMAT = '%(asctime)s %(process)d %(levelname)s %(name)s %(message)s'
-
 _logger = logging.getLogger(__name__)
 
 
@@ -41,7 +39,7 @@ def _setup_logging():
     """Initialize logging and add handlers"""
     rootlogger = logging.getLogger()
     rootlogger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(LOG_FORMAT)
+    formatter = logging.Formatter(config.LOG_FORMAT_BRIEF)
 
     # logging to stderr with maximum verbosity
     console_handler = logging.StreamHandler()
@@ -60,13 +58,13 @@ def _setup_logging():
     _logger.debug('Logging to %s with loglevel %s initialized',
                   filename, logging.getLevelName(config.LOGLEVEL))
 
-    if 'LOGENTRIES_TOKEN' in os.environ:
-        token = os.environ['LOGENTRIES_TOKEN']
-        from logentries import LogentriesHandler
-
-        logentries_handler = LogentriesHandler(token)
-        logentries_handler.setLevel(logging.DEBUG)
-        rootlogger.addHandler(logentries_handler)
+    # if 'LOGENTRIES_TOKEN' in os.environ:
+    # token = os.environ['LOGENTRIES_TOKEN']
+    #     from logentries import LogentriesHandler
+    #
+    #     logentries_handler = LogentriesHandler(token)
+    #     logentries_handler.setLevel(logging.DEBUG)
+    #     rootlogger.addHandler(logentries_handler)
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)

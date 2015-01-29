@@ -17,7 +17,23 @@ TZNAME = 'Europe/Moscow'
 
 DEBUG = bool(os.environ.get('DEBUG', False))
 
+PROPAGATE_EXCEPTIONS = True
+
 LOGLEVEL = logging.INFO
+
+LOG_FORMAT_BRIEF = ('%(asctime)s %(levelname)s %(name)s %(message)s '
+                    '[in %(pathname)s:%(lineno)d]')
+LOG_FORMAT_FULL = '''
+Message type:       %(levelname)s
+Location:           %(pathname)s:%(lineno)d
+Module:             %(module)s
+Function:           %(funcName)s
+Time:               %(asctime)s
+
+Message:
+
+%(message)s
+'''
 
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
 

@@ -2,6 +2,8 @@
 import os
 import datetime
 import rfc822
+import logging
+from logging.handlers import RotatingFileHandler
 
 from flask import (Flask, send_from_directory, render_template, make_response,
                    abort)
@@ -251,6 +253,53 @@ def category_list(return_empty=False):
 
     return outer.all()
 
+
+def setup_logging():
+    """Initialize logging and add handlers"""
+    if app.debug:
+        return
+
+    rootlogger = logging.getLogger()
+    rootlogger.setLevel(logging.DEBUG)
+
+    # logging to stderr with maximum verbosity
+    stderr_handler = logging.StreamHandler()
+    stderr_handler.setLevel(logging.DEBUG)
+    stderr_handler.setFormatter(logging.Formatter(config.LOG_FORMAT_BRIEF))
+    rootlogger.addHandler(stderr_handler)
+    app.logger.debug('Logging to stderr initialized')
+
+    # logging to file
+    log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
+    filename = os.path.join(log_dir, 'webapp.log')
+    file_handler = RotatingFileHandler(
+        filename,
+        maxBytes=1073741824,  # 1 Mb
+        backupCount=5
+    )
+    file_handler.setFormatter(logging.Formatter(config.LOG_FORMAT_BRIEF))
+    file_handler.setLevel(config.LOGLEVEL)
+    rootlogger.addHandler(file_handler)
+    app.logger.debug('Logging to %s with loglevel %s initialized',
+                     filename, logging.getLevelName(config.LOGLEVEL))
+
+    if 'LOGENTRIES_TOKEN' in os.environ:
+        token = os.environ['LOGENTRIES_TOKEN']
+        from logentries import LogentriesHandler
+
+        logentries_handler = LogentriesHandler(token)
+        logentries_handler.setLevel(logging.WARN)
+        rootlogger.addHandler(logentries_handler)
+
+    # Limit 3rd-party packages logging
+    logging.getLogger('schedule').setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
+    logging.getLogger('oauth2client').setLevel(logging.WARNING)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+
+setup_logging()
 
 if __name__ == '__main__':
     app.run(app.config['IP'], app.config['PORT'], debug=True)
