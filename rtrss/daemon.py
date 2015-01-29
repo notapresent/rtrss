@@ -9,9 +9,11 @@ _logger = logging.getLogger(__name__)
 
 class WorkerDaemon(BaseDaemon):
     def run(self):
-        _logger.info('Daemon started ith pid %d', os.getpid())
+        _logger.info('Daemon started with pid %d', os.getpid())
 
-        from rtrss.worker import worker_action
+        from rtrss.worker import worker_action, setup_external_logging
+
+        setup_external_logging()
         worker_action('run')
 
         _logger.info('Daemon is done and exiting')

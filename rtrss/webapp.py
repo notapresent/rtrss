@@ -3,8 +3,9 @@ import os
 import datetime
 import rfc822
 import logging
-from logging.handlers import RotatingFileHandler, SysLogHandler
+from logging.handlers import RotatingFileHandler
 
+from logentries import LogentriesHandler
 from flask import (Flask, send_from_directory, render_template, make_response,
                    abort)
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +14,6 @@ from sqlalchemy import orm, func
 from rtrss.models import Topic, Category, Torrent
 from rtrss.filestorage import make_storage
 from rtrss import config
-from rtrss.util import ContextFilter
 
 
 app = Flask(__name__)
@@ -283,25 +283,22 @@ def setup_logging():
     app.logger.debug('Logging to %s with loglevel %s initialized',
                      filename, logging.getLevelName(config.LOGLEVEL))
 
-    if 'PAPERTRAIL_LOGGING_ADDRESS' in os.environ:
-        pt_fmt = '%(asctime)s %(hostname)s webapp %(message)s'
-        pt_datefmt = '%Y-%m-%dT%H:%M:%S'
-        pt_host, pt_port = os.environ['PAPERTRAIL_LOGGING_ADDRESS'].split(':')
-
-        pt_handler = SysLogHandler(address=(pt_host, int(pt_port)))
-        pt_handler.addFilter(ContextFilter())
-        pt_handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(pt_fmt, datefmt=pt_datefmt)
-        pt_handler.setFormatter(formatter)
-        rootlogger.addHandler(pt_handler)
-        rootlogger.debug('Logging to %s:%s initialized', pt_host, pt_port)
+    if 'LOGENTRIES_TOKEN_WEBAPP' in os.environ:
+        token = os.environ['LOGENTRIES_TOKEN_WEBAPP']
+        fmt = '%(asctime)s : %(levelname)s %(name)s %(message)s'
+        dtfmt = '%a %b %d %H:%M:%S %Z %Y'
+        le_handler = LogentriesHandler(token)
+        formatter = logging.Formatter(fmt, dtfmt)
+        le_handler.setFormatter(formatter)
+        rootlogger.addHandler(le_handler)
+        rootlogger.debug('Logging to logentries initialized')
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
-    # Do not log requests
+    # Do not log web requests
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('newrelic').setLevel(logging.WARNING)
 

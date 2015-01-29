@@ -4,14 +4,14 @@ import os
 import logging
 import signal
 import argparse
-from logging.handlers import SysLogHandler
+
+from logentries import LogentriesHandler
 
 from rtrss import config
 from rtrss import scheduler
 from rtrss import database
 from rtrss import manager
 from rtrss.daemon import make_daemon
-from rtrss.util import ContextFilter
 
 
 _logger = logging.getLogger(__name__)
@@ -60,19 +60,6 @@ def _setup_logging():
     _logger.debug('Logging to %s with loglevel %s initialized',
                   filename, logging.getLevelName(config.LOGLEVEL))
 
-    if 'PAPERTRAIL_LOGGING_ADDRESS' in os.environ:
-        pt_fmt = '%(asctime)s %(hostname)s worker %(message)s'
-        pt_datefmt = '%Y-%m-%dT%H:%M:%S'
-        pt_host, pt_port = os.environ['PAPERTRAIL_LOGGING_ADDRESS'].split(':')
-
-        pt_handler = SysLogHandler(address=(pt_host, int(pt_port)))
-        pt_handler.addFilter(ContextFilter())
-        pt_handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(pt_fmt, datefmt=pt_datefmt)
-        pt_handler.setFormatter(formatter)
-        rootlogger.addHandler(pt_handler)
-        rootlogger.debug('Logging to %s:%s initialized', pt_host, pt_port)
-
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
@@ -80,7 +67,18 @@ def _setup_logging():
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
 
 
-# "Public" functions below this line
+def setup_external_logging():
+    rootlogger = logging.getLogger()
+    if 'LOGENTRIES_TOKEN_WORKER' in os.environ:
+        token = os.environ['LOGENTRIES_TOKEN_WORKER']
+        fmt = '%(asctime)s : %(levelname)s %(name)s %(message)s'
+        dtfmt = '%a %b %d %H:%M:%S %Z %Y'
+        le_handler = LogentriesHandler(token)
+        formatter = logging.Formatter(fmt, dtfmt)
+        le_handler.setFormatter(formatter)
+        rootlogger.addHandler(le_handler)
+        rootlogger.debug('Logging to logentries initialized')
+
 
 def app_init():
     _setup_logging()
