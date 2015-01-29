@@ -4,12 +4,14 @@ import os
 import logging
 import signal
 import argparse
+from logging.handlers import SysLogHandler
 
 from rtrss import config
 from rtrss import scheduler
 from rtrss import database
 from rtrss import manager
 from rtrss.daemon import make_daemon
+from rtrss.util import ContextFilter
 
 
 _logger = logging.getLogger(__name__)
@@ -58,13 +60,18 @@ def _setup_logging():
     _logger.debug('Logging to %s with loglevel %s initialized',
                   filename, logging.getLevelName(config.LOGLEVEL))
 
-    # if 'LOGENTRIES_TOKEN' in os.environ:
-    # token = os.environ['LOGENTRIES_TOKEN']
-    #     from logentries import LogentriesHandler
-    #
-    #     logentries_handler = LogentriesHandler(token)
-    #     logentries_handler.setLevel(logging.DEBUG)
-    #     rootlogger.addHandler(logentries_handler)
+    if 'PAPERTRAIL_LOGGING_ADDRESS' in os.environ:
+        pt_fmt = '%(asctime)s %(hostname)s worker %(message)s'
+        pt_datefmt = '%Y-%m-%dT%H:%M:%S'
+        pt_host, pt_port = os.environ['PAPERTRAIL_LOGGING_ADDRESS'].split(':')
+
+        pt_handler = SysLogHandler(address=(pt_host, int(pt_port)))
+        pt_handler.addFilter(ContextFilter())
+        pt_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(pt_fmt, datefmt=pt_datefmt)
+        pt_handler.setFormatter(formatter)
+        rootlogger.addHandler(pt_handler)
+        rootlogger.debug('Logging to %s:%s initialized', pt_host, pt_port)
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)

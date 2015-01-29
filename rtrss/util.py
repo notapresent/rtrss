@@ -2,6 +2,7 @@ import csv
 import logging
 import os
 import datetime
+import socket
 
 from rtrss import config
 from rtrss.models import User
@@ -43,3 +44,12 @@ def import_users(filename):
             added += 1
 
     _logger.info("%d users added, %d skipped", added, len(lines) - added)
+
+
+class ContextFilter(logging.Filter):
+    """Log filter that provides hostname field for lof entry"""
+    hostname = os.environ.get('OPENSHIFT_GEAR_DNS') or socket.gethostname()
+
+    def filter(self, record):
+        record.hostname = ContextFilter.hostname
+        return True

@@ -3,7 +3,7 @@ import os
 import datetime
 import rfc822
 import logging
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler, SysLogHandler
 
 from flask import (Flask, send_from_directory, render_template, make_response,
                    abort)
@@ -13,6 +13,7 @@ from sqlalchemy import orm, func
 from rtrss.models import Topic, Category, Torrent
 from rtrss.filestorage import make_storage
 from rtrss import config
+from rtrss.util import ContextFilter
 
 
 app = Flask(__name__)
@@ -66,9 +67,11 @@ def favicon():
         os.path.join(app.root_path, 'static'),
         'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+
 @app.route('/ping')
 def ping():
     return "Alive: {}".format(datetime.datetime.utcnow().isoformat())
+
 
 @app.before_first_request
 def setup():
@@ -255,18 +258,16 @@ def category_list(return_empty=False):
 
 def setup_logging():
     """Initialize logging and add handlers"""
-    if app.debug:
-        return
-
     rootlogger = logging.getLogger()
     rootlogger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(config.LOG_FORMAT_BRIEF)
 
     # logging to stderr with maximum verbosity
-    stderr_handler = logging.StreamHandler()
-    stderr_handler.setLevel(logging.DEBUG)
-    stderr_handler.setFormatter(logging.Formatter(config.LOG_FORMAT_BRIEF))
-    rootlogger.addHandler(stderr_handler)
-    app.logger.debug('Logging to stderr initialized')
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_handler.setFormatter(formatter)
+    rootlogger.addHandler(console_handler)
+    rootlogger.debug('Logging to stderr initialized')
 
     # logging to file
     log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
@@ -277,24 +278,30 @@ def setup_logging():
         backupCount=5
     )
     file_handler.setFormatter(logging.Formatter(config.LOG_FORMAT_BRIEF))
-    file_handler.setLevel(config.LOGLEVEL)
+    file_handler.setLevel(config.DEBUG)
     rootlogger.addHandler(file_handler)
     app.logger.debug('Logging to %s with loglevel %s initialized',
                      filename, logging.getLevelName(config.LOGLEVEL))
 
-    if 'LOGENTRIES_TOKEN_WEBAPP' in os.environ:
-        token = os.environ['LOGENTRIES_TOKEN_WEBAPP']
-        from logentries import LogentriesHandler
+    if 'PAPERTRAIL_LOGGING_ADDRESS' in os.environ:
+        pt_fmt = '%(asctime)s %(hostname)s webapp %(message)s'
+        pt_datefmt = '%Y-%m-%dT%H:%M:%S'
+        pt_host, pt_port = os.environ['PAPERTRAIL_LOGGING_ADDRESS'].split(':')
 
-        logentries_handler = LogentriesHandler(token)
-        logentries_handler.setLevel(logging.WARN)
-        rootlogger.addHandler(logentries_handler)
+        pt_handler = SysLogHandler(address=(pt_host, int(pt_port)))
+        pt_handler.addFilter(ContextFilter())
+        pt_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(pt_fmt, datefmt=pt_datefmt)
+        pt_handler.setFormatter(formatter)
+        rootlogger.addHandler(pt_handler)
+        rootlogger.debug('Logging to %s:%s initialized', pt_host, pt_port)
 
     # Limit 3rd-party packages logging
     logging.getLogger('schedule').setLevel(logging.WARNING)
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('googleapiclient').setLevel(logging.WARNING)
     logging.getLogger('oauth2client').setLevel(logging.WARNING)
+    # Do not log requests
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('newrelic').setLevel(logging.WARNING)
 
