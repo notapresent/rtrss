@@ -73,6 +73,10 @@ def ping():
     return "Alive: {}".format(datetime.datetime.utcnow().isoformat())
 
 
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html', env=os.environ)
+
 @app.before_first_request
 def setup():
     pass  # TODO cache warmup etc
