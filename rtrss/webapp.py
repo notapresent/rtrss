@@ -64,6 +64,9 @@ def favicon():
         os.path.join(app.root_path, 'static'),
         'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+@app.route('/ping')
+def ping():
+    return "Alive: {}".format(datetime.datetime.utcnow().isoformat())
 
 @app.before_first_request
 def setup():
