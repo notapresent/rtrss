@@ -39,6 +39,8 @@ CAPTCHA_STR = u'<img src="http://static.{host}/captcha/'
 
 MAINTENANCE_MSG = u'Форум временно отключен на профилактические работы'
 
+REQUEST_TIMEOUT = 15
+
 _logger = logging.getLogger(__name__)
 
 
@@ -68,6 +70,8 @@ class WebClient(object):
         return self.request(url).content
 
     def request(self, url, method='get', **kwargs):
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = REQUEST_TIMEOUT
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
