@@ -22,6 +22,7 @@ from rtrss.database import session_scope
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -318,6 +319,12 @@ class Manager(object):
             categories = query.all()
             db.expunge_all()
 
+        if total is None:
+            if count == 1:
+                total = len(categories)
+            else:
+                raise ValueError('total parameter is required if count > 1')
+
         message = (
             'Found {} categories with <{} torrents, '
             'going to download up to {} torrents'
@@ -328,11 +335,6 @@ class Manager(object):
         if not len(categories):
             return
 
-        if total is None:
-            if count == 1:
-                total = len(categories)
-            else:
-                raise ValueError('total parameter is required if count > 1')
 
         total_added = 0
 
