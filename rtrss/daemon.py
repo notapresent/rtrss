@@ -2,7 +2,7 @@ import os
 import logging
 
 from rtrss.basedaemon import BaseDaemon
-from rtrss import util
+from rtrss import util, config, scheduler
 
 
 _logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ class WorkerDaemon(BaseDaemon):
         util.setup_logging('daemon')
         util.setup_logentries_logging('LOGENTRIES_TOKEN_WORKER')
 
-        from rtrss.worker import worker_action
-        worker_action('run')
+        sched = scheduler.Scheduler(config)
+        return sched.run()
 
         _logger.info('Daemon is done and exiting')
 
