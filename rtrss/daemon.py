@@ -15,6 +15,7 @@ class WorkerDaemon(BaseDaemon):
         util.init_newrelic_agent()
         util.setup_logging('daemon')
         util.setup_logentries_logging('LOGENTRIES_TOKEN_WORKER')
+        util.set_signal_handlers()
 
         sched = scheduler.Scheduler(config)
         return sched.run()
