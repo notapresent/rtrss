@@ -4,6 +4,7 @@ import os
 import logging
 import signal
 import argparse
+from logging.handlers import RotatingFileHandler
 
 from logentries import LogentriesHandler
 
@@ -53,7 +54,11 @@ def _setup_logging():
     # logging to file
     log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
     filename = os.path.join(log_dir, 'worker.log')
-    file_handler = logging.FileHandler(filename)
+    file_handler = RotatingFileHandler(
+        filename,
+        maxBytes=1073741824,  # 1 Mb
+        backupCount=5
+    )
     file_handler.setFormatter(formatter)
     file_handler.setLevel(config.LOGLEVEL)
     rootlogger.addHandler(file_handler)
