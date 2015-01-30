@@ -76,10 +76,8 @@ def setup_external_logging():
     rootlogger = logging.getLogger()
     if 'LOGENTRIES_TOKEN_WORKER' in os.environ:
         token = os.environ['LOGENTRIES_TOKEN_WORKER']
-        fmt = '%(asctime)s : %(levelname)s %(name)s %(message)s'
-        dtfmt = '%a %b %d %H:%M:%S %Z %Y'
         le_handler = LogentriesHandler(token)
-        formatter = logging.Formatter(fmt, dtfmt)
+        formatter = logging.Formatter(config.LOG_FORMAT_LOGENTRIES)
         le_handler.setFormatter(formatter)
         rootlogger.addHandler(le_handler)
         rootlogger.debug('Logging to logentries initialized')
