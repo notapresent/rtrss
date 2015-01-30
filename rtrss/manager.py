@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import or_
+from newrelic.agent import BackgroundTask
 
 from rtrss.scraper import Scraper
 from rtrss.models import Topic, User, Category, Torrent
@@ -18,7 +19,7 @@ from rtrss.exceptions import (TopicException, OperationInterruptedException,
                               DownloadLimitException)
 import rtrss.filestorage as filestorage
 from rtrss.database import session_scope
-
+from rtrss import util
 
 
 
@@ -46,13 +47,20 @@ class Manager(object):
 
     def run_task(self, task_name, *args, **kwargs):
         """Run task, catching all exceptions"""
+        app = util.get_newreilc_app('worker', 10.0)
+        if app:
+            with BackgroundTask(app, name=task_name, group='Task'):
+                return self.task_wrapper(task_name, *args, **kwargs)
+        else:
+            return self.task_wrapper(task_name, *args, **kwargs)
+
+    def task_wrapper(self, task_name, *args, **kwargs):
         try:
             getattr(self, task_name)(*args, **kwargs)
         except OperationInterruptedException as e:
             _logger.warn("Operation interrupted: {}".format(str(e)))
-            # TODO better error message and stacktrace
-            # except Exception as e:
-            # _logger.error("%s %s", type(e), str(e))
+        except Exception as e:
+            _logger.exception("%s %s", type(e), str(e))
 
     def update(self):
         _logger.debug('Starting update')

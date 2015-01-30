@@ -2,11 +2,8 @@
 import os
 import datetime
 import rfc822
-import logging
-from logging.handlers import RotatingFileHandler
 from functools import wraps
 
-from logentries import LogentriesHandler
 from flask import (Flask, send_from_directory, render_template, make_response,
                    abort, Response, request)
 from flask_sqlalchemy import SQLAlchemy
@@ -288,55 +285,3 @@ def category_list(return_empty=False):
         outer = outer.filter(tcc.c.cnt > 0)
 
     return outer.all()
-
-
-def setup_logging():
-    """Initialize logging and add handlers"""
-    rootlogger = logging.getLogger()
-    rootlogger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(config.LOG_FORMAT_BRIEF)
-
-    # logging to stderr with maximum verbosity
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    console_handler.setFormatter(formatter)
-    rootlogger.addHandler(console_handler)
-    rootlogger.debug('Logging to stderr initialized')
-
-    # logging to file
-    log_dir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
-    filename = os.path.join(log_dir, 'webapp.log')
-    file_handler = RotatingFileHandler(
-        filename,
-        maxBytes=1073741824,  # 1 Mb
-        backupCount=5
-    )
-    file_handler.setFormatter(logging.Formatter(config.LOG_FORMAT_BRIEF))
-    file_handler.setLevel(config.DEBUG)
-    rootlogger.addHandler(file_handler)
-    app.logger.debug('Logging to %s with loglevel %s initialized',
-                     filename, logging.getLevelName(config.LOGLEVEL))
-
-    if 'LOGENTRIES_TOKEN_WEBAPP' in os.environ:
-        token = os.environ['LOGENTRIES_TOKEN_WEBAPP']
-        le_handler = LogentriesHandler(token)
-        formatter = logging.Formatter(config.LOG_FORMAT_LOGENTRIES)
-        le_handler.setFormatter(formatter)
-        rootlogger.addHandler(le_handler)
-        rootlogger.debug('Logging to logentries initialized')
-
-    # Limit 3rd-party packages logging
-    logging.getLogger('schedule').setLevel(logging.WARNING)
-    logging.getLogger('requests').setLevel(logging.WARNING)
-    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
-    logging.getLogger('oauth2client').setLevel(logging.WARNING)
-    logging.getLogger('newrelic').setLevel(logging.WARNING)
-    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
-    # Do not log web requests
-    logging.getLogger('werkzeug').setLevel(logging.WARNING)
-
-
-setup_logging()
-
-if __name__ == '__main__':
-    app.run(app.config['IP'], app.config['PORT'], debug=True)

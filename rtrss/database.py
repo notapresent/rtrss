@@ -1,3 +1,4 @@
+import csv
 import logging
 from contextlib import contextmanager
 
@@ -58,3 +59,31 @@ def clear(eng=None):
     from rtrss.models import Base
 
     Base.metadata.drop_all(bind=eng)
+
+
+def import_users(filename):
+    """Import user account from CSV file, skipping existing users"""
+    from rtrss.models import User
+
+    with open(filename) as csvfile:
+        reader = csv.DictReader(csvfile, skipinitialspace=True)
+        lines = [line for line in reader]
+
+    _logger.info("Importing {} accounts from {}".format(len(lines), filename))
+
+    added = 0
+    with session_scope() as db:
+        for fields in lines:
+            fields['id'] = int(fields['id'])
+            fields['downloads_limit'] = int(fields['downloads_limit'])
+            existing_user = db.query(User).get(fields['id'])
+
+            if existing_user:
+                continue
+
+            user = User(**fields)
+
+            db.add(user)
+            added += 1
+
+    _logger.info("%d users added, %d skipped", added, len(lines) - added)

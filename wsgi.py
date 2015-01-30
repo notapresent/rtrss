@@ -11,10 +11,11 @@ if os.environ.get('OPENSHIFT_PYTHON_DIR'):      # on Openshift
 # line, it's possible required libraries won't be in your searchable path
 #
 
-# Run new relic agent if we have license key
-if 'NEW_RELIC_LICENSE_KEY' in os.environ:
-    import newrelic.agent
-    newrelic.agent.initialize()
+from rtrss import util
+
+util.setup_logging('webapp')
+util.setup_logentries_logging('LOGENTRIES_TOKEN_WEBAPP')
+util.init_newrelic_agent()
 
 from rtrss.webapp import app as application
 

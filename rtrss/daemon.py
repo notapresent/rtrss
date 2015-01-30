@@ -2,6 +2,7 @@ import os
 import logging
 
 from rtrss.basedaemon import BaseDaemon
+from rtrss import util
 
 
 _logger = logging.getLogger(__name__)
@@ -11,9 +12,11 @@ class WorkerDaemon(BaseDaemon):
     def run(self):
         _logger.info('Daemon started with pid %d', os.getpid())
 
-        from rtrss.worker import worker_action, setup_external_logging
+        util.init_newrelic_agent()
+        util.setup_logging('daemon')
+        util.setup_logentries_logging('LOGENTRIES_TOKEN_WORKER')
 
-        setup_external_logging()
+        from rtrss.worker import worker_action
         worker_action('run')
 
         _logger.info('Daemon is done and exiting')
@@ -31,9 +34,21 @@ class WorkerDaemon(BaseDaemon):
         super(WorkerDaemon, self).restart()
 
 
-def make_daemon(config):
+def make_daemon(cfg):
     """Returns WorkerDaemon instance"""
-    pidfile = os.path.join(config.DATA_DIR, 'daemon.pid')
-    logdir = os.environ.get('OPENSHIFT_LOG_DIR') or config.DATA_DIR
-    logfile = os.path.join(logdir, 'debug.log')
-    return WorkerDaemon(pidfile, stdout=logfile, stderr=logfile)
+    pidfile = os.path.join(cfg.DATA_DIR, 'daemon.pid')
+    logdir = os.environ.get('OPENSHIFT_LOG_DIR') or cfg.DATA_DIR
+    logfile = os.path.join(logdir, 'daemon-stderr.log')
+    return WorkerDaemon(pidfile, stdout=None, stderr=logfile)
+
+
+def get_status_string(instance):
+    """Return daemon status string"""
+    running = instance.is_running()
+    if running:
+        with open(instance.pidfile, 'r') as f:
+            pid = f.read().strip()
+        msg = "Daemon is running with pid {}".format(pid)
+    else:
+        msg = "Daemon is not running"
+    return msg
