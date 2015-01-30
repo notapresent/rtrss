@@ -76,7 +76,7 @@ class WebClient(object):
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            _logger.warn('Request failed: %s', e)
+            _logger.warn('url:%s Request failed  %s', url, e)
             raise OperationInterruptedException(str(e))
 
         response.is_text = is_text_response(response)
