@@ -34,7 +34,9 @@ Message:
 %(message)s
 '''
 
-LOG_FORMAT_LOGENTRIES = ('level:%(levelname)s component:%(name)s '
+LOG_FORMAT_LOGENTRIES = ('process:%(processName)s pid:%(process)d '
+                         # 'thread:%(threadName)s tid: %(thread)d '
+                         'level:%(levelname)s component:%(name)s '
                          '%(message)s')
 
 SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY', 'development key')
