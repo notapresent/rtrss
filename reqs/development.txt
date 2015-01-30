@@ -2,3 +2,4 @@ flake8==2.3.0
 gsutil==4.8
 ipython==2.3.1
 rerun==1.0.23
+mock==1.0.1
