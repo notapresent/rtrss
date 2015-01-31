@@ -39,7 +39,7 @@ CAPTCHA_STR = u'<img src="http://static.{host}/captcha/'
 
 MAINTENANCE_MSG = u'Форум временно отключен на профилактические работы'
 
-REQUEST_TIMEOUT = 15
+REQUEST_TIMEOUT = 45
 
 _logger = logging.getLogger(__name__)
 
