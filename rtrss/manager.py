@@ -24,6 +24,7 @@ from rtrss import util
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -147,8 +148,10 @@ class Manager(object):
         # Torrent new or changed
         if is_new_topic or old_infohash != infohash:
             self.process_torrent(tid, infohash, old_infohash)
+            return 1
 
-        return 1
+        return 0
+
 
     def ensure_category(self, c_dict, parents):
         """
