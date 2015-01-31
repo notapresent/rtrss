@@ -1,20 +1,20 @@
-<html>
-    <head>
-        <title>RSS</title>
-    </head>
-    <body>
-        <img src="{{ url_for('static', filename='logo.svg') }}">
-        <hr>
+{% extends "base.html" %}
+{% block title %}{{ super() }} - Главная{% endblock %}
+{% block content %}
 
+<h3 class="text-muted">Выберите категорию</h3>
+
+<p class="lead">
+
+</p>
 <ul>
-{% for item in tree.children recursive %}
+    {% for item in tree.children recursive %}
     <li><a href="{{ url_for('feed', category_id=item.id, _external=True) }}">{{
         item.title }}</a>
     {%- if item.children %}
-        <ul class="submenu">{{ loop(item.children) }}</ul>
+        <ul>{{ loop(item.children) }}</ul>
     {% endif -%}</li>
-{%- endfor %}
+    {%- endfor %}
 </ul>
 
-    </body>
-</html>
+{% endblock %}
