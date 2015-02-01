@@ -86,7 +86,9 @@ class WebClient(object):
             response.encoding = detect_cp1251_encoding(response)
 
         if response.is_text and MAINTENANCE_MSG in response.text:
-            raise OperationInterruptedException('Tracker maintenance')
+            message = 'Tracker is down for maintenance'
+            _logger.info(message)
+            raise OperationInterruptedException(message)
 
         return response
 
