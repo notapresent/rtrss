@@ -1,4 +1,10 @@
 body {
     padding-top: 60px; /* Required padding for .navbar-fixed-top. Change if height of navigation changes. */
 }
-.navbar-brand { padding-top: 9px;}
+.navbar-brand { padding-top: 9px; }
+.navbar-brand .fa-stack { margin-right: 4px; }
+
+a.navbar-brand:hover, ul.nav li:hover {
+    -moz-text-shadow: 1px 1px 5px #aaa;
+     -webkit-text-shadow: 1px 1px 5px #aaa;
+     text-shadow: 1px 1px 5px #aaa;}
