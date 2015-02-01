@@ -1,20 +1,44 @@
 {% extends "base.html" %}
-{% block title %}{{ super() }} - Главная{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    #treeview li {
+    font-size: 1.3em;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+<script>var treeData = {{ json | safe }};</script>
 
-<h3 class="text-muted">Выберите категорию</h3>
+<h3 class="text-muted">Выберите раздел</h3>
+<p class="lead"></p>
 
-<p class="lead">
+<div id="treeview" class="test"></div>
+{% endblock %}
 
-</p>
-<ul>
-    {% for item in tree.children recursive %}
-    <li><a href="{{ url_for('feed', category_id=item.id, _external=True) }}">{{
-        item.title }}</a>
-    {%- if item.children %}
-        <ul>{{ loop(item.children) }}</ul>
-    {% endif -%}</li>
-    {%- endfor %}
-</ul>
+{% block foot %}
+{{ super() }}
+<script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
+<script>
+$(function() {
+    $('#treeview').treeview({
+          enableLinks: false,
+          showTags: true,
+          data: treeData,
+          levels: 1,
+          showBorder: false,
+          expandIcon: 'glyphicon glyphicon-chevron-right',
+          collapseIcon: 'glyphicon glyphicon-chevron-down',
+          emptyIcon: 'fa fa-file-o',
+          nodeIcon: 'glyphicon' /* glyphicon-copy */
+    });
 
+    $('#treeview').on('nodeSelected', function(event, node) {
+        //console.log(event, node);
+    });
+});
+
+</script>
 {% endblock %}
