@@ -134,26 +134,38 @@ def category_link(category, tracker_host):
 def make_category_tree():
     categories = category_list()
 
-    tree = dict({
-        'id': 0,
-        'title': 'Root',
-        'parent_id': None,
-        'children': list()
-    })
-    childmap = dict({0: tree['children']})
+    tree = [dict({
+        'fid': 0,
+        'text': u'Все разделы',
+        'parent_fid': None,
+        # 'nodes': list()
+    })]
+    childmap = dict({0: tree[0]})
 
     for category in categories:
         catdict = dict({
-            'id': category.id,
-            'title': category.title,
-            'parent_id': category.parent_id,
-            'children': list()
+            'fid': category.id,
+            'text': category.title,
+            # 'parent_fid': category.parent_id,
         })
 
-        childmap[category.id] = catdict['children']
-        childmap[category.parent_id].append(catdict)
+        childmap[category.id] = catdict
 
+        if 'nodes' not in childmap[category.parent_id]:
+            childmap[category.parent_id]['nodes'] = list()
+
+        childmap[category.parent_id]['nodes'].append(catdict)
+
+    sort_leafs_first(tree)
     return tree
+
+
+def sort_leafs_first(tree):
+    tree.sort(key=lambda n: 0 if 'nodes' in n else 1)
+
+    for item in tree:
+        if 'nodes' in item:
+            sort_leafs_first(item['nodes'])
 
 
 def category_list(return_empty=False):
@@ -198,4 +210,3 @@ def category_list(return_empty=False):
         outer = outer.filter(tcc.c.cnt > 0)
 
     return outer.all()
-
