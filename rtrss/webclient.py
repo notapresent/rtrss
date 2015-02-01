@@ -39,7 +39,9 @@ CAPTCHA_STR = u'<img src="http://static.{host}/captcha/'
 
 MAINTENANCE_MSG = u'Форум временно отключен на профилактические работы'
 
-REQUEST_TIMEOUT = 45
+REQUEST_TIMEOUT = 15
+
+MAX_RETRIES = 3
 
 _logger = logging.getLogger(__name__)
 
@@ -60,6 +62,9 @@ class WebClient(object):
     def __init__(self, config, user=None):
         self.config = config
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(max_retries=MAX_RETRIES)
+        self.session.mount('http://', adapter)
+
         self.user = user
 
         if user:
