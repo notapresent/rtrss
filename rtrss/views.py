@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import datetime
+import json
 from functools import wraps
 
 from flask import (send_from_directory, render_template, make_response, abort,
@@ -37,7 +38,8 @@ def requires_auth(f):
 @blueprint.route('/')
 def index():
     tree = make_category_tree()
-    return render_template('index.html', tree=tree)
+    jsontree = json.dumps(tree, ensure_ascii=False, separators=(',', ':'))
+    return render_template('index.html', json=jsontree)
 
 
 @blueprint.route('/torrent/<int:torrent_id>')
@@ -88,3 +90,9 @@ def ping():
 def dashboard():
     return render_template('dashboard.html', env=os.environ)
 
+
+@blueprint.context_processor
+def inject_auth():
+    auth = request.authorization
+    authorized = auth and check_auth(auth.username, auth.password)
+    return dict(authorized=authorized)
