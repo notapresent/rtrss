@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0">
 <channel>
 <title>{{ channel.title }}</title>
 <description>{{ channel.description }}</description>
@@ -10,7 +10,8 @@
 {%- for item in items %}
     <item>
       <title>{{ item.title }}</title>
-      <enclosure type="application/x-bittorrent" url="{{ url_for('torrent', torrent_id=item.id, _external=True) }}"/>
+        <enclosure type="application/x-bittorrent"
+                   url="{{ url_for('views.torrent', torrent_id=item.id, _external=True) }}"/>
       <guid isPermaLink="false">{{ item.guid }}</guid>
       <pubDate>{{ item.pubDate }}</pubDate>
     </item>
