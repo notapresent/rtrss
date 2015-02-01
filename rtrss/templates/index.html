@@ -6,7 +6,6 @@
 {% endblock %}
 
 {% block content %}
-<script>var treeData = {{ json | safe }};</script>
 
 <div class="row">
     <div class="col-lg-6">
@@ -32,6 +31,7 @@
 
 {% block foot %}
 {{ super() }}
+<script src="{{ url_for('views.loadtree') }}"></script>
 <script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
 <script>
 $(function() {
