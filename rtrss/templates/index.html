@@ -2,20 +2,32 @@
 
 {% block head %}
 {{ super() }}
-<style>
-    #treeview li {
-    font-size: 1.3em;
-    }
-</style>
+
 {% endblock %}
 
 {% block content %}
 <script>var treeData = {{ json | safe }};</script>
 
-<h3 class="text-muted">Выберите раздел</h3>
-<p class="lead"></p>
+<div class="row">
+    <div class="col-lg-6">
+        <div id="feedform" data-spy="affix" data-offset-top="2">
+            <h2></h2>
 
-<div id="treeview" class="test"></div>
+            <p>
+
+            </p>
+        </div>
+    </div>
+
+    <div id="category_chooser" class="col-lg-6">
+        <h4 class="text-muted">Выбор раздела</h4>
+
+        <div id="treeview"></div>
+    </div>
+
+
+</div>
+
 {% endblock %}
 
 {% block foot %}
@@ -23,11 +35,14 @@
 <script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
 <script>
 $(function() {
+    var feedformWidth = $('#category_chooser').width() - parseInt($('#feedform').css('paddingLeft')) - parseInt($('#feedform').css('paddingRight'));
+    $('#feedform').css('width', feedformWidth);
+
     $('#treeview').treeview({
           enableLinks: false,
           showTags: true,
           data: treeData,
-          levels: 1,
+          levels: 2,
           showBorder: false,
           expandIcon: 'glyphicon glyphicon-chevron-right',
           collapseIcon: 'glyphicon glyphicon-chevron-down',
