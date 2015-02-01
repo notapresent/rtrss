@@ -5,6 +5,6 @@ body {
 .navbar-brand .fa-stack { margin-right: 4px; }
 
 a.navbar-brand:hover, ul.nav li:hover {
-    -moz-text-shadow: 1px 1px 5px #aaa;
-     -webkit-text-shadow: 1px 1px 5px #aaa;
-     text-shadow: 1px 1px 5px #aaa;}
+    -moz-text-shadow: 1px 1px 5px #bbb;
+     -webkit-text-shadow: 1px 1px 5px #bbb;
+     text-shadow: 1px 1px 5px #bbb;}
