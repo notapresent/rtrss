@@ -24,3 +24,5 @@ ul.list-group.open li.list-group-item.node-selected span.indent { display: inlin
 #feedform {
     margin: 1em;
 }
+
+#copy-button.zeroclipboard-is-active { background-color: #ffa; }

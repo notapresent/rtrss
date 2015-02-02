@@ -25,10 +25,12 @@
                     <input id="rsslink" type="text"
                            data-linkbase="{{ url_for('views.feed', _external=True) }}"
                            class="form-control" readonly>
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button"><span
-                        class="glyphicon glyphicon-copy"></span></button>
-              </span>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button"
+                                id="copy-button">
+                            <span class="glyphicon glyphicon-copy"></span>
+                        </button>
+                    </span>
                 </div>
                 <!-- /input-group -->
 
@@ -46,6 +48,8 @@
 {{ super() }}
 <script src="{{ url_for('views.loadtree') }}"></script>
 <script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
+<script src="{{ url_for('static', filename='ZeroClipboard.min.js') }}"></script>
+
 <script>
 
 function update_feed_link() {
@@ -53,6 +57,22 @@ function update_feed_link() {
     var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
     $("#rsslink").attr('value', feed_url);
 }
+ZeroClipboard.config( { swfPath: "{{ url_for('static', filename='ZeroClipboard.swf') }}" } );
+var client = new ZeroClipboard( document.getElementById("copy-button") );
+
+client.on( "ready", function( readyEvent ) {
+
+    client.on( 'copy', function(event) {
+          event.clipboardData.setData('text/plain', $("#rsslink").attr('value'));
+        } );
+
+  client.on( "aftercopy", function( event ) {
+    //console.log('Copied text to clipboard: ' + event.data['text/plain']);
+    $("#copy-button").blur();
+
+  } );
+} );
+
 
 $(function() {
     update_feed_link();
@@ -86,3 +106,4 @@ $(function() {
 
 </script>
 {%- endblock -%}
+
