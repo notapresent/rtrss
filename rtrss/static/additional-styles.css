@@ -10,17 +10,17 @@ a.navbar-brand:hover, ul.nav li:hover {
      text-shadow: 1px 1px 5px #bbb;
 }
 
-#treeview li {
-    font-size: 0.9em;
-}
+li.list-group-item.node-selected { border-radius: 4px; }
+li.list-group-item button { display: none; }
+ul.list-group.open li.list-group-item.node-selected button { display: block; }
 
-#category_chooser {
-    margin-top: 4em;
-}
+ul.list-group li.list-group-item { display: none; }
+ul.list-group li.list-group-item.node-selected { display: block; }
+ul.list-group.open li.list-group-item { display: block; }
 
+ul.list-group li.list-group-item.node-selected span.indent { display: none;}
+ul.list-group.open li.list-group-item.node-selected span.indent { display: inline;}
 
-@media (max-width: 768px) {
-    .affix {
-        position: static;
-    }
+#feedform {
+    margin: 1em;
 }

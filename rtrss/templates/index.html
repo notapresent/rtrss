@@ -1,42 +1,61 @@
 {% extends "base.html" %}
 
-{% block head %}
-{{ super() }}
+{%- block head %}{{ super() }}{% endblock -%}
 
-{% endblock %}
-
-{% block content %}
-
+{%- block content -%}
 <div class="row">
-    <div class="col-lg-6">
-        <div id="feedform" data-spy="affix" data-offset-top="2">
-            <h2></h2>
+    <div class="col-lg-8">
 
-            <p>
+        <div id="feedform">
+            <div class="form-group">
+                <label for="treeview">Выбор раздела</label>
 
-            </p>
+                <div id="treeview"></div>
+            </div>
+
+            <!--<div class="form-group">-->
+            <!--<label for="passkey">Passkey</label>-->
+            <!--<input id="passkey" type="text" class="form-control" placeholder="">-->
+            <!--</div>-->
+
+            <div class="form-group">
+                <label for="rsslink">Ссылка на RSS</label>
+
+                <div class="input-group">
+                    <input id="rsslink" type="text"
+                           data-linkbase="{{ url_for('views.feed', _external=True) }}"
+                           class="form-control" readonly>
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button"><span
+                        class="glyphicon glyphicon-copy"></span></button>
+              </span>
+                </div>
+                <!-- /input-group -->
+
+            </div>
+
         </div>
+
     </div>
 
-    <div id="category_chooser" class="col-lg-6">
-        <h4 class="text-muted">Выбор раздела</h4>
-
-        <div id="treeview"></div>
-    </div>
-
-
+    <div class="col-lg-4"></div>
 </div>
+{%- endblock -%}
 
-{% endblock %}
-
-{% block foot %}
+{%- block foot -%}
 {{ super() }}
 <script src="{{ url_for('views.loadtree') }}"></script>
 <script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
 <script>
+
+function update_feed_link() {
+    var catid = parseInt($('#treeview').data('catid'));
+    var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
+    $("#rsslink").attr('value', feed_url);
+}
+
 $(function() {
-    var feedformWidth = $('#category_chooser').width() - parseInt($('#feedform').css('paddingLeft')) - parseInt($('#feedform').css('paddingRight'));
-    $('#feedform').css('width', feedformWidth);
+    update_feed_link();
 
     $('#treeview').treeview({
           enableLinks: false,
@@ -50,10 +69,20 @@ $(function() {
           nodeIcon: 'glyphicon' /* glyphicon-copy */
     });
 
+    $('#treeview').on('click', 'li', function(event) {
+        $('#treeview ul').addClass('open');
+    });
+
+    $('#treeview').on('click', 'button.selectcat', function(event, node) {
+        $('#treeview ul').toggleClass('open');
+        update_feed_link();
+        event.stopPropagation();
+    });
+
     $('#treeview').on('nodeSelected', function(event, node) {
-        //console.log(event, node);
+        $('#treeview').data('catid', node.fid);
     });
 });
 
 </script>
-{% endblock %}
+{%- endblock -%}

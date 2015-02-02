@@ -105,8 +105,7 @@
 			this._destroy();
 			this._subscribeEvents();
 			this._render();
-			this.selectedNode = this.nodes[0];
-			this._render();
+			this.selectedNode = this.nodes[0]; this._render();
 
 		},
 
@@ -127,17 +126,19 @@
 		},
 
 		_clickHandler: function(event) {
-
 			if (!this.options.enableLinks) { event.preventDefault(); }
 
 			var target = $(event.target),
 				classList = target.attr('class') ? target.attr('class').split(' ') : [],
 				node = this._findNode(target);
 
-			if (true) {
+			if (node) {
+                this._collapseAllButThis(node);
 				// Expand or collapse node by toggling child node visibility
-				this._collapseAllButThis(node);
-				this._toggleNodes(node);
+                if( typeof(node._nodes) != 'undefined') {
+                    this._toggleNodes(node);
+                }
+
 				this._setSelectedNode(node);
 				this._render();
 			}
@@ -154,13 +155,15 @@
 				node = this.nodes[nodeId];
 
 			if (!node) {
-				console.log('Error: node does not exist');
+				console.log('Error: node does not exist:' + target);
 			}
 			return node;
 		},
 
 		_collapseAllButThis: function(node) {
 		    var i, ids=[], cNode=node;
+
+		    if(typeof cNode == "undefined" || !cNode.nodeId) { return; }
 
 		    while(cNode) {
 		        ids.push(cNode.nodeId);
@@ -414,7 +417,7 @@
 
 		_template: {
 			list: '<ul class="list-group"></ul>',
-			item: '<li class="list-group-item"></li>',
+			item: '<li class="clearfix list-group-item"><button class="selectcat pull-right btn btn-default btn-xs">Выбрать</button></li>',
 			indent: '<span class="indent"></span>',
 			iconWrapper: '<span class="icon"></span>',
 			icon: '<i></i>',
