@@ -57,7 +57,10 @@ function update_feed_link() {
     var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
     $("#rsslink").attr('value', feed_url);
 }
-ZeroClipboard.config( { swfPath: "{{ url_for('static', filename='ZeroClipboard.swf') }}" } );
+ZeroClipboard.config({
+    swfPath: "{{ url_for('static', filename='ZeroClipboard.swf') }}",
+    cacheBust: false,
+    } );
 var client = new ZeroClipboard( document.getElementById("copy-button") );
 
 client.on( "ready", function( readyEvent ) {
