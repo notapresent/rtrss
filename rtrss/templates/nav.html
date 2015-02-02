@@ -23,7 +23,7 @@
             <ul class="nav navbar-nav navbar-right">
                 <li><a target="_blank" class="fblink" href="#">Обратная
                     связь</a></li>
-                <li><a href="#">FAQ</a></li>
+                <li><a href="{{ url_for('views.faq') }}">FAQ</a></li>
                 {% if authorized %}
                 <li><a href="{{ url_for('views.dashboard') }}">ЦУП</a></li>
                 {% endif %}

@@ -108,3 +108,8 @@ def inject_auth():
     auth = request.authorization
     authorized = auth and check_auth(auth.username, auth.password)
     return dict(authorized=authorized)
+
+
+@blueprint.route('/faq.html')
+def faq():
+    return render_template('faq.html')
