@@ -4,6 +4,7 @@ All database interactions are performed by Manager
 """
 import logging
 import datetime
+import os
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import func
@@ -20,8 +21,7 @@ from rtrss.exceptions import (TopicException, OperationInterruptedException,
 import rtrss.filestorage as filestorage
 from rtrss.database import session_scope
 from rtrss import util
-
-
+from rtrss.caching import DiskCache
 
 
 
@@ -192,6 +192,11 @@ class Manager(object):
 
         category = find_category(c_dict['tracker_id'], c_dict['is_subforum'])
         _logger.info('Added category %s (%d)', category.title, category.id)
+
+        cache = DiskCache(os.path.join(self.config.DATA_DIR, 'cache'))
+        cache_key = 'category_tree.json'
+        del cache[cache_key]
+
         return category.id
 
     def process_torrent(self, tid, infohash, old_infohash=None):

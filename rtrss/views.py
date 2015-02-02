@@ -3,8 +3,6 @@ import os
 import datetime
 import json
 from functools import wraps
-from contextlib import contextmanager
-from tempfile import NamedTemporaryFile
 
 from flask import (send_from_directory, render_template, make_response, abort,
                    Response, request, blueprints, )
@@ -13,6 +11,7 @@ from rtrss import config
 from rtrss.filestorage import make_storage
 from rtrss.webapphelpers import (make_category_tree, get_feed_data,
                                  check_auth)
+from rtrss.caching import DiskCache
 
 
 blueprint = blueprints.Blueprint('views', __name__)
@@ -44,17 +43,16 @@ def index():
 
 @blueprint.route('/loadtree')
 def loadtree():
-    filename = os.path.join(config.DATA_DIR, 'category_tree.json')
+    cache = DiskCache(os.path.join(config.DATA_DIR, 'cache'))
+    cache_key = 'category_tree.json'
 
-    if not os.path.exists(filename):
+    if cache_key not in cache:
         tree = make_category_tree()
         jsontree = json.dumps(tree, ensure_ascii=False, separators=(',', ':'))
         jsondata = u"var treeData = {};".format(jsontree)
-
-        with FaultTolerantFile(filename) as f:
-            f.write(jsondata.encode('utf-8'))
-
-    return send_from_directory(config.DATA_DIR, 'category_tree.json')
+        cache[cache_key] = jsondata.encode('utf-8')
+    dirname, filename = os.path.split(cache.full_path(cache_key))
+    return send_from_directory(dirname, filename)
 
 @blueprint.route('/torrent/<int:torrent_id>')
 def torrent(torrent_id):
@@ -110,16 +108,3 @@ def inject_auth():
     auth = request.authorization
     authorized = auth and check_auth(auth.username, auth.password)
     return dict(authorized=authorized)
-
-
-@contextmanager
-def FaultTolerantFile(name):
-    dirpath, filename = os.path.split(name)
-    # use the same dir for os.rename() to work
-    with NamedTemporaryFile(dir=dirpath, prefix=filename, suffix='.tmp') as f:
-        yield f
-        f.flush()  # libc -> OS
-        os.fsync(f)  # OS -> disc (note: on OSX it is not enough)
-        f.delete = False  # don't delete tmp file if `replace()` fails
-        f.close()
-        os.rename(f.name, name)
