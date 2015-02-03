@@ -43,7 +43,7 @@ class WebAppTestCase(RTRSSDataBaseTestCase):
         self._populate_test_db()
         rv = self.app.get('/torrent/{}?pk={}'.format(torrent_id, passkey))
         tf = torrentfile.TorrentFile(rv.data)
-        tf.add_announcer(passkey)
+
         self.assertIn('announce', tf.decoded)
         self.assertIn(passkey, tf.decoded['announce'])
 

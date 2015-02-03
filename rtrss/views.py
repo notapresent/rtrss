@@ -68,7 +68,7 @@ def torrent(torrent_id):
     tf = torrentfile.TorrentFile(bindata)
     if passkey:
         ann_url = random.choice(config.ANNOUNCE_URLS)
-        tf.add_announcer(ann_url)
+        tf.add_announcer(ann_url + '?uk={}'.format(passkey))
 
     fn = '{}.torrent'.format(torrent_id)
     resp = make_response(tf.encoded)
