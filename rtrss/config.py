@@ -26,6 +26,9 @@ APP_ENVIRONMENT = os.environ.get('RTRSS_ENVIRONMENT')
 if not APP_ENVIRONMENT:
     raise EnvironmentError('RTRSS_ENVIRONMENT must be set')
 
+IP = '0.0.0.0'
+PORT = 8080
+
 _mod = importlib.import_module('rtrss.config_{}'.format(APP_ENVIRONMENT))
 _envconf = {k: v for k, v in _mod.__dict__.items() if k == k.upper()}
 globals().update(_envconf)
