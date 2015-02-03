@@ -25,4 +25,4 @@ from rtrss.webapp import app as application
 if __name__ == '__main__':
     from rtrss import config
 
-    application.run(config.IP, config.PORT, debug=True, threaded=True)
+    application.run(config.IP, config.PORT)
