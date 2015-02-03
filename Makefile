@@ -3,7 +3,10 @@
 all: test
 
 test:
-	python -m unittest discover
+	RTRSS_ENVIRONMENT='testing' python -m unittest discover
+
+retest:
+	RTRSS_ENVIRONMENT='testing' rerun --verbose --ignore=data --ignore=.idea "python -m unittest discover"
 
 clean: clean-pyc clean-data
 
