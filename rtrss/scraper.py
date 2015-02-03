@@ -153,7 +153,7 @@ class Scraper(object):
         tf = torrentfile.TorrentFile(bindata)
 
         try:
-            tf.remove_passkeys()
+            tf.remove_announcers_with_passkeys()
         except ValueError as e:
             message = "Failed to decode torrent {}: {}".format(tid, str(e))
             _logger.error(message)
