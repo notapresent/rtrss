@@ -4,9 +4,13 @@ import bencode
 
 
 class TorrentFile(object):
-    def __init__(self, bindata):
-        self._encoded = bindata
-        self._decoded = None
+    def __init__(self, initdata):
+        if isinstance(initdata, dict):
+            self._decoded = initdata
+            self._encoded = None
+        else:
+            self._encoded = initdata
+            self._decoded = None
 
     def get_encoded(self):
         if self._encoded is None:
@@ -51,7 +55,7 @@ class TorrentFile(object):
 
         return length
 
-    def remove_passkeys(self):
+    def remove_announcers_with_passkeys(self):
         """Remove all announce urls with user passkey"""
         if '?uk=' in self.decoded['announce']:
             self.decoded.pop('announce', None)
@@ -59,3 +63,9 @@ class TorrentFile(object):
         newlist = filter(lambda a: '?uk=' not in a[0], ann_list)
         self.decoded['announce-list'] = newlist
         self._encoded = None
+
+    def add_announcer(self, announcer):
+        self.decoded['announce'] = announcer
+        if 'announce-list' not in self.decoded:
+            self.decoded['announce-list'] = list()
+        self.decoded['announce-list'].append([announcer])

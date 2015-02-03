@@ -23,3 +23,15 @@ class TorrentFileTestCase(unittest.TestCase):
         tf = torrentfile.TorrentFile('invalid data')
         with self.assertRaises(ValueError):
             _ = tf.decoded
+
+    def test_remove_announcers_with_passkeys_removes(self):
+        pass  # TODO
+
+    def test_add_anouncer_adds_anouncer(self):
+        tf = torrentfile.TorrentFile(encoded_testdata)
+        test_announcer = 'some random announcer string'
+        tf.add_announcer(test_announcer)
+
+        self.assertEqual(tf._decoded['announce'], test_announcer)
+        self.assertIn([test_announcer], tf._decoded['announce-list'])
+
