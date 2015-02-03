@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
 import datetime
-import hashlib
 
-import bencode
 from dateutil import parser as dateparser
 import pytz
 from lxml import etree
 
+from rtrss import torrentfile
 from rtrss.exceptions import TopicException, ItemProcessingFailedException
 from rtrss.webclient import WebClient
 from rtrss.util import save_debug_file
@@ -151,22 +150,21 @@ class Scraper(object):
     def get_torrent(self, tid, user):
         wc = WebClient(self.config, user)
         bindata = wc.get_torrent(tid)
+        tf = torrentfile.TorrentFile(bindata)
 
         try:
-            decoded = bencode.bdecode(bindata)
-
-        except bencode.BTFailure as e:
+            tf.remove_passkeys()
+        except ValueError as e:
             message = "Failed to decode torrent {}: {}".format(tid, str(e))
             _logger.error(message)
             if self.config.DEBUG:
                 save_debug_file('{}-failed.torrent'.format(tid), bindata)
             raise TopicException(message)
 
-        processed = process_torrent(decoded)
         torrent_dict = dict({
-            'download_size': calculate_download_size(processed['info']),
-            'infohash': calculate_infohash(processed['info']),
-            'torrentfile': bencode.bencode(processed)
+            'download_size': tf.download_size,
+            'infohash': tf.infohash,
+            'torrentfile': tf.encoded
         })
 
         return torrent_dict
@@ -264,28 +262,3 @@ class Scraper(object):
         })
 
         return tdict
-
-
-def calculate_infohash(info):
-    """Calculates torrent infohash from decoded info section"""
-    return hashlib.sha1(bencode.bencode(info)).hexdigest()
-
-
-def calculate_download_size(info):
-    """Calculates torrent size from decoded info section"""
-    length = info.get('length', 0)
-    if length:
-        return length
-
-    for entry in info['files']:
-        length += entry['length']
-
-    return length
-
-
-def process_torrent(decoded):
-    """Remove all announce urls with user passkey"""
-    decoded.pop('announce', None)
-    ann_list = decoded['announce-list']
-    decoded['announce-list'] = filter(lambda a: '?uk=' not in a[0], ann_list)
-    return decoded
