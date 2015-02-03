@@ -28,7 +28,7 @@ class RTRSSTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if os.path.isdir(config.DATA_DIR):
-            os.rmdir(config.DATA_DIR)
+            shutil.rmtree(config.DATA_DIR)
         os.makedirs(config.DATA_DIR)
 
     @classmethod
