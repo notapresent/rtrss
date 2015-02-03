@@ -109,9 +109,11 @@ def get_subcategories(parent_ids):
 
 
 def get_feed_items(category_ids=None):
-    if category_ids is None or len(category_ids) > 1:
+    if category_ids is None:  # Root category
+        limit = 100
+    elif len(category_ids) > 1:  # Category with subcategories
         limit = 75
-    else:
+    else:  # Leaf category
         limit = 25
 
     query = db.session.query(Topic).join(Torrent)
