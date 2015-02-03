@@ -13,10 +13,11 @@
                 <div id="treeview"></div>
             </div>
 
-            <!--<div class="form-group">-->
-            <!--<label for="passkey">Passkey</label>-->
-            <!--<input id="passkey" type="text" class="form-control" placeholder="">-->
-            <!--</div>-->
+            <div class="form-group">
+                <label for="passkey">Passkey</label>
+                <input id="passkey" type="text" class="form-control"
+                       placeholder="">
+            </div>
 
             <div class="form-group">
                 <label for="rsslink">Ссылка на RSS</label>
@@ -55,8 +56,13 @@
 function update_feed_link() {
     var catid = parseInt($('#treeview').data('catid'));
     var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
+    var passkey = $('#passkey').val();
+     if(passkey) {
+        feed_url = feed_url + '?pk=' + passkey;
+     }
     $("#rsslink").attr('value', feed_url);
 }
+
 ZeroClipboard.config({
     swfPath: "{{ url_for('static', filename='ZeroClipboard.swf') }}",
     cacheBust: false,
@@ -79,6 +85,8 @@ client.on( "ready", function( readyEvent ) {
 
 $(function() {
     update_feed_link();
+
+    $('#passkey').change(update_feed_link);
 
     $('#treeview').treeview({
           enableLinks: false,
