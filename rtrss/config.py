@@ -10,10 +10,10 @@ TRACKER_HOST = 'rutracker.org'
 TZNAME = 'Europe/Moscow'
 
 ANNOUNCE_URLS = [
-    'bt.{host}/ann'.format(host=TRACKER_HOST),
-    'bt2.{host}/ann'.format(host=TRACKER_HOST),
-    'bt3.{host}/ann'.format(host=TRACKER_HOST),
-    'bt4.{host}/ann'.format(host=TRACKER_HOST)
+    'http://bt.{host}/ann'.format(host=TRACKER_HOST),
+    'http://bt2.{host}/ann'.format(host=TRACKER_HOST),
+    'http://bt3.{host}/ann'.format(host=TRACKER_HOST),
+    'http://bt4.{host}/ann'.format(host=TRACKER_HOST)
 ]
 
 LOGLEVEL = logging.INFO
