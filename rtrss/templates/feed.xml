@@ -11,7 +11,7 @@
     <item>
       <title>{{ item.title }}</title>
         <enclosure type="application/x-bittorrent"
-                   url="{{ url_for('views.torrent', torrent_id=item.id, _external=True) }}"/>
+                   url="{{ url_for('views.torrent', torrent_id=item.id, pk=passkey, _external=True) }}"/>
       <guid isPermaLink="false">{{ item.guid }}</guid>
       <pubDate>{{ item.pubDate }}</pubDate>
     </item>

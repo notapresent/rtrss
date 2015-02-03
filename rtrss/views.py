@@ -2,6 +2,7 @@
 import os
 import datetime
 import json
+import random
 from functools import wraps
 
 from flask import (send_from_directory, render_template, make_response, abort,
@@ -12,6 +13,7 @@ from rtrss.filestorage import make_storage
 from rtrss.webapphelpers import (make_category_tree, get_feed_data,
                                  check_auth)
 from rtrss.caching import DiskCache
+from rtrss import torrentfile
 
 
 blueprint = blueprints.Blueprint('views', __name__)
@@ -56,29 +58,34 @@ def loadtree():
 
 @blueprint.route('/torrent/<int:torrent_id>')
 def torrent(torrent_id):
-    # TODO add user passkey support
-    storage = make_storage(config)
-    torrentfile = storage.get(config.TORRENT_PATH_PATTERN.format(torrent_id))
+    passkey = request.args.get('pk')
+    storage = make_storage(config)  # TODO make credentials storage global
+    bindata = storage.get(config.TORRENT_PATH_PATTERN.format(torrent_id))
 
-    if torrentfile:
-        fn = '{}.torrent'.format(torrent_id)
-        resp = make_response(torrentfile)
-        resp.headers['Content-Type'] = 'application/x-bittorrent'
-        resp.headers['Content-Disposition'] = 'attachment; filename=' + fn
-        return resp
-
-    else:
+    if not bindata:
         abort(404)
 
+    tf = torrentfile.TorrentFile(bindata)
+    if passkey:
+        ann_url = random.choice(config.ANNOUNCE_URLS)
+        tf.add_announcer(ann_url)
+
+    fn = '{}.torrent'.format(torrent_id)
+    resp = make_response(tf.encoded)
+    resp.headers['Content-Type'] = 'application/x-bittorrent'
+    resp.headers['Content-Disposition'] = 'attachment; filename=' + fn
+    return resp
 
 @blueprint.route('/feed/', defaults={'category_id': 0})
 @blueprint.route('/feed/<int:category_id>')
 def feed(category_id=0):
+    passkey = request.args.get('pk')
     feed_data = get_feed_data(category_id)
     content = render_template(
         'feed.xml',
         channel=feed_data['channel'],
-        items=feed_data['items']
+        items=feed_data['items'],
+        passkey=passkey
     ).encode('utf-8')
     response = make_response(content)
     response.headers['content-type'] = 'application/rss+xml; charset=UTF-8'

@@ -9,6 +9,13 @@ TRACKER_HOST = 'rutracker.org'
 # Timeone for the tracker times
 TZNAME = 'Europe/Moscow'
 
+ANNOUNCE_URLS = [
+    'bt.{host}/ann'.format(host=TRACKER_HOST),
+    'bt2.{host}/ann'.format(host=TRACKER_HOST),
+    'bt3.{host}/ann'.format(host=TRACKER_HOST),
+    'bt4.{host}/ann'.format(host=TRACKER_HOST)
+]
+
 LOGLEVEL = logging.INFO
 
 LOG_FORMAT_LOGENTRIES = '%(levelname)s %(name)s %(message)s'
