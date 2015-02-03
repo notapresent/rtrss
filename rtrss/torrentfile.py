@@ -6,11 +6,13 @@ import bencode
 class TorrentFile(object):
     def __init__(self, initdata):
         if isinstance(initdata, dict):
-            self._decoded = initdata
+            self._decoded = initdata.copy()
             self._encoded = None
-        else:
+        elif isinstance(initdata, str):
             self._encoded = initdata
             self._decoded = None
+        else:
+            raise ValueError('Torrent initial data must be string or dict')
 
     def get_encoded(self):
         if self._encoded is None:
@@ -69,3 +71,4 @@ class TorrentFile(object):
         if 'announce-list' not in self.decoded:
             self.decoded['announce-list'] = list()
         self.decoded['announce-list'].append([announcer])
+        self._encoded = None
