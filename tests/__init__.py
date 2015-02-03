@@ -1,6 +1,7 @@
 import logging
 import unittest
 import os
+import shutil
 
 from sqlalchemy import create_engine
 
@@ -32,7 +33,7 @@ class RTRSSTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        os.rmdir(config.DATA_DIR)
+        shutil.rmtree(config.DATA_DIR)
 
 
 class RTRSSDataBaseTestCase(RTRSSTestCase):
