@@ -13,3 +13,4 @@ GCS_PRIVATEKEY_URL = os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')
 PORT = int(os.environ.get('OPENSHIFT_PYTHON_PORT'))
 IP = os.environ.get('OPENSHIFT_PYTHON_IP')
 
+DEBUG = False
