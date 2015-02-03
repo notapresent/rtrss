@@ -27,7 +27,7 @@ Vagrant.configure(2) do |config|
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-  config.vm.network "private_network", ip: "192.168.254.2"
+  # config.vm.network "private_network", ip: "192.168.254.2"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
@@ -84,7 +84,7 @@ sudo apt-get install -y postgresql postgresql-client
 
 echo "Updating postgresql settings"
 sudo sed -i 's/peer/trust/' /etc/postgresql/9.3/main/pg_hba.conf
-echo '\nhost all all 192.168.254.0/24 md5' | sudo tee --append /etc/postgresql/9.3/main/pg_hba.conf
+echo '\nhost all all 10.0.0.0/8 md5' | sudo tee --append /etc/postgresql/9.3/main/pg_hba.conf
 sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /etc/postgresql/9.3/main/postgresql.conf
 sudo service postgresql restart
 
