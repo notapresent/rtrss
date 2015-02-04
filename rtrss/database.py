@@ -95,7 +95,7 @@ def import_users(filename):
 
 def schema_exists(name):
     query = (
-        exists(select([("schema_name")]).
+        exists(select(["schema_name"]).
                select_from("information_schema.schemata")
                .where("schema_name = 'public'"))
     )
