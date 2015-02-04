@@ -4,19 +4,14 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.engine import reflection
-from sqlalchemy import create_engine
-from sqlalchemy.schema import (
-    MetaData,
-    Table,
-    DropTable,
-    ForeignKeyConstraint,
-    DropConstraint,
-)
+from sqlalchemy import create_engine, exists, select
+from sqlalchemy.schema import CreateSchema, DropSchema
 
 from rtrss.exceptions import OperationInterruptedException
 from rtrss import config
 
+
+SCHEMA_NAME = 'public'
 
 _logger = logging.getLogger(__name__)
 
@@ -55,7 +50,8 @@ def init(eng=None):
 
     if eng is None:
         eng = engine
-
+    if not schema_exists(SCHEMA_NAME):
+        eng.execute(CreateSchema(SCHEMA_NAME))
     from rtrss.models import Base
     Base.metadata.create_all(bind=eng)
 
@@ -65,8 +61,8 @@ def clear(eng=None):
 
     if eng is None:
         eng = engine
-
-    drop_all_cascade(eng)
+    if schema_exists(SCHEMA_NAME):
+        eng.execute(DropSchema(SCHEMA_NAME, cascade=True))
 
 
 def import_users(filename):
@@ -97,39 +93,13 @@ def import_users(filename):
     _logger.info("%d users added, %d skipped", added, len(lines) - added)
 
 
-def drop_all_cascade(e):
-    conn = e.connect()
-    # the transaction only applies if the DB supports
-    # transactional DDL, i.e. Postgresql, MS SQL Server
-    trans = conn.begin()
-
-    inspector = reflection.Inspector.from_engine(e)
-
-    # gather all data first before dropping anything.
-    # some DBs lock after things have been dropped in
-    # a transaction.
-
-    metadata = MetaData()
-
-    tbs = []
-    all_fks = []
-
-    for table_name in inspector.get_table_names():
-        fks = []
-        for fk in inspector.get_foreign_keys(table_name):
-            if not fk['name']:
-                continue
-            fks.append(
-                ForeignKeyConstraint((), (), name=fk['name'])
-            )
-        t = Table(table_name, metadata, *fks)
-        tbs.append(t)
-        all_fks.extend(fks)
-
-    for fkc in all_fks:
-        conn.execute(DropConstraint(fkc))
-
-    for table in tbs:
-        conn.execute(DropTable(table))
-
-    trans.commit()
+def schema_exists(name):
+    query = (
+        exists(select([("schema_name")]).
+               select_from("information_schema.schemata")
+               .where("schema_name = 'public'"))
+    )
+    sess = Session()
+    result = sess.query(query).scalar()
+    sess.close()
+    return result
