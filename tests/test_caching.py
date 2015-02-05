@@ -1,17 +1,19 @@
 import os
 import tempfile
 
-from . import RTRSSTestCase
-from rtrss import caching, config
+from . import TempDirTestCase
+from rtrss import caching
 
 
-class CachingTestCase(RTRSSTestCase):
+class CachingTestCase(TempDirTestCase):
     def setUp(self):
-        fh, self.filename = tempfile.mkstemp(dir=config.DATA_DIR)
+        super(CachingTestCase, self).setUp()
+        fh, self.filename = tempfile.mkstemp(dir=self.dir.path)
         os.close(fh)
 
     def tearDown(self):
         os.remove(self.filename)
+        super(CachingTestCase, self).tearDown()
 
     def test_open_for_atomic_write_writes(self):
         test_data = 'test'
