@@ -1,20 +1,12 @@
 import logging
 import unittest
-import os
-import shutil
 
-from sqlalchemy import create_engine
+from testfixtures import TempDirectory
 
-from rtrss import config, database
+from rtrss import database
 
 
 logging.disable(logging.ERROR)
-
-engine = create_engine(config.SQLALCHEMY_DATABASE_URI,
-                       echo=False,
-                       client_encoding='utf8')
-# Reconfigure session factory to use our test schema
-database.Session.configure(bind=engine)
 
 
 class AttrDict(dict):
@@ -24,26 +16,24 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-class RTRSSTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if os.path.isdir(config.DATA_DIR):
-            shutil.rmtree(config.DATA_DIR)
-        os.makedirs(config.DATA_DIR)
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(config.DATA_DIR)
-
-
-class RTRSSDataBaseTestCase(RTRSSTestCase):
+class TempDirTestCase(unittest.TestCase):
     def setUp(self):
-        database.clear(engine)
-        database.init(engine)
+        super(TempDirTestCase, self).setUp()
+        self.dir = TempDirectory()
+
+    def tearDown(self):
+        self.dir.cleanup()
+        super(TempDirTestCase, self).tearDown()
+
+
+class DatabaseTestCase(unittest.TestCase):
+    def setUp(self):
+        super(DatabaseTestCase, self).setUp()
+        database.clear()
+        database.init()
         self.db = database.Session()
 
     def tearDown(self):
-        database.clear(engine)
         self.db.close()
-
-
+        database.clear()
+        super(DatabaseTestCase, self).tearDown()
