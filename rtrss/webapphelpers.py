@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import orm, func
 
 from rtrss.models import Topic, Category, Torrent
+from rtrss.stats import get_stats
 from rtrss import config
 
 
@@ -212,3 +213,6 @@ def category_list(return_empty=False):
         outer = outer.filter(tcc.c.cnt > 0)
 
     return outer.all()
+
+def get_stats_data():
+    return get_stats(db.session)
