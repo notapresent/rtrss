@@ -1,17 +1,19 @@
 import datetime
 
-from . import RTRSSDataBaseTestCase
+from tests import DatabaseTestCase, TempDirTestCase
 from rtrss import config
 from rtrss.models import *
-from rtrss.webapp import app
+from rtrss.webapp import make_app
 from rtrss import torrentfile
-from rtrss.filestorage import make_storage
+from rtrss.filestorage.localdirectorystorage import DirectoryFileStorage
 
 
-class WebAppTestCase(RTRSSDataBaseTestCase):
+class WebAppTestCase(DatabaseTestCase, TempDirTestCase):
     def setUp(self):
         super(WebAppTestCase, self).setUp()
-        self.app = app.test_client()
+        config.DATA_DIR = self.dir.path
+        config.FILESTORAGE_URL = 'file://{}'.format(self.dir.path)
+        self.app = make_app(config).test_client()
 
     def _populate_test_db(self):
         c = Category(id=0, title='Test category', tracker_id=0)
@@ -23,6 +25,7 @@ class WebAppTestCase(RTRSSDataBaseTestCase):
         self.db.commit()
 
     def test_index_returns_200(self):
+
         rv = self.app.get('/')
         self.assertEqual(rv.status_code, 200)
 
@@ -36,7 +39,8 @@ class WebAppTestCase(RTRSSDataBaseTestCase):
         torrent_id = 1
         tf = torrentfile.TorrentFile({'some key': 'some value'})
         storage_key = config.TORRENT_PATH_PATTERN.format(torrent_id)
-        storage = make_storage(config)
+
+        storage = DirectoryFileStorage(self.dir.path)
         storage.put(storage_key, tf.encoded)
 
         passkey = 'somerandompasskey'
