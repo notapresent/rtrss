@@ -17,7 +17,9 @@ util.setup_logging('webapp')
 util.setup_logentries_logging('LOGENTRIES_TOKEN_WEBAPP')
 util.init_newrelic_agent()
 
-from rtrss.webapp import app as application
+from rtrss.webapp import make_app
+
+application = make_app('rtrss.config')
 
 #
 # Below for testing only
