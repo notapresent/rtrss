@@ -40,7 +40,7 @@ class WebAppTestCase(DatabaseTestCase, TempDirTestCase):
         tf = torrentfile.TorrentFile({'some key': 'some value'})
         storage_key = config.TORRENT_PATH_PATTERN.format(torrent_id)
 
-        storage = DirectoryFileStorage(self.dir.path)
+        storage = DirectoryFileStorage(config)
         storage.put(storage_key, tf.encoded)
 
         passkey = 'somerandompasskey'
