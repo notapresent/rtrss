@@ -13,6 +13,5 @@ SECRET_KEY = 'development key'
 
 FILESTORAGE_URL = 'file://{}'.format(DATA_DIR)
 
-SERVER_NAME = os.environ.get('C9_HOSTNAME', 'localhost:8080')
 PORT = int(os.environ.get('C9_PORT', 8080))
 IP = os.environ.get('C9_IP', '0.0.0.0')

@@ -11,8 +11,9 @@ from flask import (send_from_directory, render_template, make_response, abort,
 from rtrss import config
 from rtrss.filestorage import make_storage
 from rtrss.webapphelpers import (make_category_tree, get_feed_data,
-                                 check_auth)
+                                 check_auth, get_stats_data)
 from rtrss.caching import DiskCache
+from rtrss.stats import get_stats
 from rtrss import torrentfile
 
 
@@ -120,3 +121,13 @@ def inject_auth():
 @blueprint.route('/faq.html')
 def faq():
     return render_template('faq.html')
+
+
+@blueprint.route('/stats')
+@requires_auth
+def stats():
+    data = get_stats_data()
+    jsondata = json.dumps(data, ensure_ascii=False)
+    response = make_response(jsondata)
+    response.headers['Content-Type'] = 'application/json'
+    return response
