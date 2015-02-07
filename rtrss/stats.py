@@ -32,7 +32,7 @@ def get_stats(db):
         'total_topics': row.tc,
         'total_torrentfile_size': row.tts,
 
-        'categories_total': row.cats_total,
+        'total_categories': row.cats_total,
         'categories_with_torrents': row.cats_wt,
 
         'total_dlslots': row.total_dlslots,
