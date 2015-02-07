@@ -22,7 +22,7 @@ import rtrss.filestorage as filestorage
 from rtrss.database import session_scope
 from rtrss import util
 from rtrss.caching import DiskCache
-
+from rtrss.stats import get_stats
 
 
 # Minimum and maximum number of torrents to store, per category
@@ -87,8 +87,11 @@ class Manager(object):
     def daily_reset(self):
         """Reset user download counters"""
         with session_scope() as db:
+            stats = get_stats(db)
             db.query(User).update({User.downloads_today: 0})
-        _logger.info('Daily reset finished')
+        stats_values = ["{}={}".format(k, v) for k, v in stats.items()]
+        _logger.info('stats {}'.format(' '.join(stats_values)))
+
 
     def make_pending_list(self):
         """
