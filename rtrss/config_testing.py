@@ -13,4 +13,4 @@ TESTING = True
 SECRET_KEY = 'development key'
 
 # This should be set by tests
-FILESTORAGE_URL = None
+FILESTORAGE_SETTINGS = None
