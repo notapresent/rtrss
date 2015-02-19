@@ -30,6 +30,7 @@ from rtrss.stats import get_stats
 
 
 
+
 # Minimum and maximum number of torrents to store, per category
 KEEP_TORRENTS_MIN = 25
 KEEP_TORRENTS_MAX = 75
@@ -68,8 +69,6 @@ class Manager(object):
             getattr(self, task_name)(*args, **kwargs)
         except OperationInterruptedException as e:
             _logger.warn("Operation interrupted: {}".format(str(e)))
-        except Exception as e:
-            _logger.exception("%s %s", type(e), str(e))
 
     def update(self):
         _logger.debug('Starting update')
