@@ -8,10 +8,9 @@ import threading
 
 import httplib2
 from oauth2client.client import SignedJwtAssertionCredentials
-from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 from googleapiclient.http import BatchHttpRequest
-from googleapiclient.errors import BatchError
+from googleapiclient.errors import BatchError, HttpError
 
 from rtrss.storage.util import retry_on_exception
 from rtrss.storage.credentialstorage import Storage
@@ -107,10 +106,16 @@ class GCSStorage(object):
     def delete(self, key):
         """Delete file from storage"""
         with threading.Lock():
-            self.client.objects().delete(
-                bucket=self.bucket_name,
-                object=self.prefix + key
-            ).execute()
+            try:
+                self.client.objects().delete(
+                    bucket=self.bucket_name,
+                    object=self.prefix + key
+                ).execute()
+            except HttpError as e:
+                if e.resp.status == 404:
+                    pass
+                else:
+                    raise
 
     def bulk_delete(self, keys):
         with threading.Lock():
