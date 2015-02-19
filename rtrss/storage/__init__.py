@@ -14,8 +14,8 @@ def make_storage(storage_settings, data_path):
     if parsed.scheme == 'gs':
         bucket = parsed.netloc
         prefix = parsed.path.lstrip('/')
-        client_email = storage_settings.pop('CLIENT_EMAIL')
-        keyfile_url = storage_settings.pop('PRIVATEKEY_URL')
+        client_email = storage_settings.get('CLIENT_EMAIL')
+        keyfile_url = storage_settings.get('PRIVATEKEY_URL')
         keyfile_path = os.path.join(
             data_path,
             'google-storage-privatekey-{}'.format(hash(keyfile_url))
