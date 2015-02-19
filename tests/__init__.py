@@ -1,5 +1,7 @@
 import logging
 import unittest
+import random
+import string
 
 from testfixtures import TempDirectory
 
@@ -37,3 +39,8 @@ class DatabaseTestCase(unittest.TestCase):
         self.db.close()
         database.clear()
         super(DatabaseTestCase, self).tearDown()
+
+
+def random_key(length=32, allowed=string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(allowed) for _ in range(length))
+

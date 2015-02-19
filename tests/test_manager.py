@@ -1,4 +1,4 @@
-from . import DatabaseTestCase
+from tests import DatabaseTestCase
 
 from rtrss import manager
 

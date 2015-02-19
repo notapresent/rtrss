@@ -12,6 +12,8 @@ from googleapiclient.errors import HttpError
 
 
 
+
+
 # Number of retries in case of API errors
 NUM_RETRIES = 3
 
@@ -98,7 +100,7 @@ def locked_open(filename, mode=M_READ, blocking=True):
 @retry_on_exception()
 def download_and_save_keyfile(keyfile_url, keyfile_path):
     """Download private key file and store it"""
-    content = requests.get(keyfile_url).text
+    content = requests.get(keyfile_url).content
     with open(keyfile_path, 'w') as fh:
         fh.write(content)
     _logger.info('Keyfile saved to {}'.format(keyfile_path))

@@ -13,17 +13,18 @@ def make_storage(storage_settings, data_path):
 
     if parsed.scheme == 'gs':
         bucket = parsed.netloc
-        prefix = parsed.path
+        prefix = parsed.path.lstrip('/')
+        client_email = storage_settings.pop('CLIENT_EMAIL')
         keyfile_url = storage_settings.pop('PRIVATEKEY_URL')
         keyfile_path = os.path.join(
             data_path,
-            'google-storage-privatekey-{}.json'.format(hash(keyfile_url))
+            'google-storage-privatekey-{}'.format(hash(keyfile_url))
         )
 
         if not os.path.isfile(keyfile_path):
             download_and_save_keyfile(keyfile_url, keyfile_path)
 
-        return gcs.GCSStorage(bucket, prefix, keyfile_path)
+        return gcs.GCSStorage(bucket, prefix, keyfile_path, client_email)
 
     elif parsed.scheme == 'file':
         dirname = parsed.path.rstrip('/')

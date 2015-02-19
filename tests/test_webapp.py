@@ -1,19 +1,30 @@
 import datetime
 
-from tests import DatabaseTestCase, TempDirTestCase
+from testfixtures import TempDirectory
+
+from mock import patch
+
+from tests import DatabaseTestCase
 from rtrss import config
 from rtrss.models import *
 from rtrss.webapp import make_app
 from rtrss import torrentfile
-from rtrss.filestorage.localdirectorystorage import DirectoryFileStorage
 
 
-class WebAppTestCase(DatabaseTestCase, TempDirTestCase):
+# FIXME this test suite needs refactoring
+class WebAppTestCase(DatabaseTestCase):
     def setUp(self):
         super(WebAppTestCase, self).setUp()
+        self.dir = TempDirectory()
         config.DATA_DIR = self.dir.path
-        config.FILESTORAGE_URL = 'file://{}'.format(self.dir.path)
+        config.FILESTORAGE_SETTINGS = {
+            'URL': 'file://{}'.format(self.dir.path)
+        }
         self.app = make_app(config).test_client()
+
+    def tearDown(self):
+        self.dir.cleanup()
+        super(WebAppTestCase, self).tearDown()
 
     def _populate_test_db(self):
         c = Category(id=0, title='Test category', tracker_id=0)
@@ -25,7 +36,6 @@ class WebAppTestCase(DatabaseTestCase, TempDirTestCase):
         self.db.commit()
 
     def test_index_returns_200(self):
-
         rv = self.app.get('/')
         self.assertEqual(rv.status_code, 200)
 
@@ -35,14 +45,12 @@ class WebAppTestCase(DatabaseTestCase, TempDirTestCase):
         rv = self.app.get('/feed/?pk={}'.format(passkey))
         self.assertIn(passkey, rv.data)
 
-    def test_torrent_passkey_embedding(self):
+    @patch('rtrss.views.storage')
+    def test_torrent_passkey_embedding(self, mock_storage):
         torrent_id = 1
+
         tf = torrentfile.TorrentFile({'some key': 'some value'})
-        storage_key = config.TORRENT_PATH_PATTERN.format(torrent_id)
-
-        storage = DirectoryFileStorage(self.dir.path)
-        storage.put(storage_key, tf.encoded)
-
+        mock_storage.get.return_value = tf.encoded
         passkey = 'somerandompasskey'
         self._populate_test_db()
         rv = self.app.get('/torrent/{}?pk={}'.format(torrent_id, passkey))

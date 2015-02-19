@@ -22,7 +22,8 @@ class FileStorageTestCase(unittest.TestCase):
     def test_makestorage_returns_GCSStorage(self, _):
         settings = {
             'URL': 'gs:///random bucket name',
-            'PRIVATEKEY_URL': 'random url'
+            'PRIVATEKEY_URL': 'random url',
+            'CLIENT_EMAIL': 'random email'
         }
         s = storage.make_storage(settings, self.dir.path)
         self.assertIsInstance(s, storage.gcs.GCSStorage)

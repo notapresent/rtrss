@@ -9,7 +9,8 @@ SECRET_KEY = os.environ.get('RTRSS_SECRET_KEY')
 
 FILESTORAGE_SETTINGS = {
     'URL': os.environ.get('RTRSS_FILESTORAGE_URL'),
-    'PRIVATEKEY_URL': os.environ.get('RTRSS_GCS_PRIVATEKEY_URL')
+    'PRIVATEKEY_URL': os.environ.get('RTRSS_GCS_PRIVATEKEY_URL'),
+    'CLIENT_EMAIL': os.environ.get('RTRSS_CLIENT_EMAIL')
 }
 
 PORT = int(os.environ.get('OPENSHIFT_PYTHON_PORT'))

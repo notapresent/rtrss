@@ -12,7 +12,7 @@ DEBUG = True
 SECRET_KEY = 'development key'
 
 FILESTORAGE_SETTINGS = {
-    'URL': 'file://{}'.format(DATA_DIR),
+    'URL': 'file://{}/torrents'.format(DATA_DIR),
 }
 
 

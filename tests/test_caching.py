@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from . import TempDirTestCase
+from tests import TempDirTestCase
 from rtrss import caching
 
 

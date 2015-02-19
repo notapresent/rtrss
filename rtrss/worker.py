@@ -68,7 +68,8 @@ def make_argparser():
     wp.add_argument(
         'action',
         help='Action to perform',
-        choices=['run', 'update', 'sync_categories', 'populate_categories']
+        choices=['run', 'update', 'sync_categories', 'populate_categories',
+                 'cleanup']
     )
     wp.set_defaults(func=worker_action)
 

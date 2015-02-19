@@ -9,12 +9,14 @@ from flask import (send_from_directory, render_template, make_response, abort,
                    Response, request, blueprints, )
 
 from rtrss import config
-from rtrss.filestorage import make_storage
+from rtrss.storage import make_storage
 from rtrss.webapphelpers import (make_category_tree, get_feed_data,
                                  check_auth)
 from rtrss.caching import DiskCache
 from rtrss import torrentfile
 
+
+storage = make_storage(config.FILESTORAGE_SETTINGS, config.DATA_DIR)
 
 blueprint = blueprints.Blueprint('views', __name__)
 
@@ -45,6 +47,7 @@ def index():
 
 @blueprint.route('/loadtree')
 def loadtree():
+    # TODO replace DIskCache
     cache = DiskCache(os.path.join(config.DATA_DIR, 'cache'))
     cache_key = 'category_tree.json'
 
@@ -56,11 +59,11 @@ def loadtree():
     dirname, filename = os.path.split(cache.full_path(cache_key))
     return send_from_directory(dirname, filename)
 
+
 @blueprint.route('/torrent/<int:torrent_id>')
 def torrent(torrent_id):
     passkey = request.args.get('pk')
-    storage = make_storage(config)  # TODO make credentials storage global
-    bindata = storage.get(config.TORRENT_PATH_PATTERN.format(torrent_id))
+    bindata = storage.get('{}.torrent'.format(torrent_id))
 
     if not bindata:
         abort(404)
@@ -75,6 +78,7 @@ def torrent(torrent_id):
     resp.headers['Content-Type'] = 'application/x-bittorrent'
     resp.headers['Content-Disposition'] = 'attachment; filename=' + fn
     return resp
+
 
 @blueprint.route('/feed/', defaults={'category_id': 0})
 @blueprint.route('/feed/<int:category_id>')

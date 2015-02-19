@@ -25,9 +25,6 @@ ADMIN_LOGIN = os.environ.get('ADMIN_LOGIN', 'admin')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@localhost')
 
-# path to save torrent files
-TORRENT_PATH_PATTERN = 'torrents/{}.torrent'
-
 IP = '0.0.0.0'
 PORT = 8080
 
