@@ -17,3 +17,6 @@ clean-pyc:
 clean-data:
 	rm -rf ./data/*.log
 	rm ./data/*.html
+
+create-supervisord-conf:
+	sed -e "s;###LOG_DIR###;${OPENSHIFT_LOG_DIR};g" -e "s;###TMP_DIR###;${OPENSHIFT_TMP_DIR};g" -e "s;###DATA_DIR###;${OPENSHIFT_DATA_DIR};g" supervisord-openshift.conf.template > supervisord-openshift.conf

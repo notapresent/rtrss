@@ -10,8 +10,9 @@ fi
 source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
 
 if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
-  echo "Runing on head gear, restarting worker"
+  echo "Runing on head gear, rebuilding supervisord config and restarting worker"
   cd $OPENSHIFT_REPO_DIR
+  make create-supervisord-conf
   supervisorctl -c supervisord-openshift.conf reread
   supervisorctl -c supervisord-openshift.conf restart all
 
