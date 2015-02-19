@@ -3,7 +3,7 @@ import os
 import logging
 import argparse
 
-from rtrss import config, scheduler, database, manager, util,
+from rtrss import config, scheduler, database, manager, util
 
 
 _logger = logging.getLogger(__name__)
