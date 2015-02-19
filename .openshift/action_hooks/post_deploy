@@ -10,9 +10,11 @@ fi
 source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
 
 if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
-  echo "Runing on head gear, restarting daemon"
+  echo "Runing on head gear, restarting worker"
   cd $OPENSHIFT_REPO_DIR
-  python -m rtrss daemon restart
+  supervisorctl -c supervisord-openshift.conf reread
+  supervisorctl -c supervisord-openshift.conf restart all
+
 else
   echo "Running on slave gear"
 fi

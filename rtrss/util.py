@@ -52,25 +52,12 @@ def setup_logging(component_name):
     rootlogger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(config.LOG_FORMAT_BRIEF)
 
-    # logging to stderr with maximum verbosity
-    console_handler = logging.StreamHandler()
+    # logging to stdout with maximum verbosity
+    console_handler = logging.StreamHandler(stream=sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
     rootlogger.addHandler(console_handler)
-    _logger.debug('Logging to stderr initialized')
-
-    # logging to file
-    filename = get_logfile_abspath(component_name)
-    file_handler = RotatingFileHandler(
-        filename,
-        maxBytes=1073741824,  # 1 Mb
-        backupCount=5
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(config.LOGLEVEL)
-    rootlogger.addHandler(file_handler)
-    _logger.debug('Logging to %s with loglevel %s initialized',
-                  filename, logging.getLevelName(config.LOGLEVEL))
+    _logger.debug('Logging to stdout initialized')
 
     # Limit 3rd-party packages logging
     loggers = ['schedule', 'requests', 'googleapiclient', 'oauth2client',

@@ -3,7 +3,7 @@ import os
 import logging
 import argparse
 
-from rtrss import config, scheduler, database, manager, util, daemon
+from rtrss import config, scheduler, database, manager, util
 
 
 _logger = logging.getLogger(__name__)
@@ -44,15 +44,6 @@ def db_action(action):
         database.import_users(csvfilename)
 
 
-def daemon_action(action):
-    demon = daemon.make_daemon(config)
-    if action == 'status':
-        print daemon.get_status_string(demon)
-        return 0
-    else:
-        return getattr(demon, action)()
-
-
 def make_argparser():
     # create the top-level parser
     parser = argparse.ArgumentParser(
@@ -73,17 +64,6 @@ def make_argparser():
     )
     wp.set_defaults(func=worker_action)
 
-    dp = subparsers.add_parser(
-        'daemon',
-        help='Daemon control'
-    )
-    dp.add_argument(
-        'action',
-        help='Control daemon process or view status',
-        choices=['start', 'stop', 'restart', 'status']
-    )
-    dp.set_defaults(func=daemon_action)
-
     dbp = subparsers.add_parser(
         'db',
         help='Database managemant')
@@ -100,9 +80,7 @@ def make_argparser():
 def main():
     """Control script entry point"""
     args = make_argparser().parse_args()
-
-    if args.subcommand != 'daemon':
-        util.setup_logging(args.subcommand)
+    util.setup_logging(args.subcommand)
 
     args.func(args.action)
 
