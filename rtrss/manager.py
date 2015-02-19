@@ -7,9 +7,10 @@ import datetime
 import os
 
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import or_
+from sqlalchemy import orm, func, over, Integer
+from sqlalchemy.dialects.postgres import ARRAY
 from newrelic.agent import BackgroundTask
 
 from rtrss.scraper import Scraper
@@ -18,11 +19,15 @@ from rtrss.exceptions import (TopicException, OperationInterruptedException,
                               CaptchaRequiredException, TorrentFileException,
                               ItemProcessingFailedException,
                               DownloadLimitException)
-import rtrss.filestorage as filestorage
 from rtrss.database import session_scope
-from rtrss import util
+from rtrss import util, storage
 from rtrss.caching import DiskCache
 from rtrss.stats import get_stats
+
+
+
+
+
 
 
 # Minimum and maximum number of torrents to store, per category
@@ -43,7 +48,10 @@ class Manager(object):
         if self._storage:
             return self._storage
         else:
-            self._storage = filestorage.make_storage(self.config)
+            self._storage = storage.make_storage(
+                self.config.FILESTORAGE_SETTINGS,
+                self.config.DATA_DIR
+            )
             return self._storage
 
     def run_task(self, task_name, *args, **kwargs):
@@ -79,10 +87,59 @@ class Manager(object):
         self.invalidate_cache()
 
     def cleanup(self):
-        removed = 0
-        # TODO Implement this
+        to_delete = list()
+        with session_scope() as db:
+            twc = (
+                db.query(Topic.category_id, Topic.updated_at, Torrent.id)
+                .join(Torrent, Torrent.id == Topic.id)
+                .subquery(name='twc')
+            )
+
+            s2 = (
+                db.query(
+                    twc.c.category_id,
+                    twc.c.updated_at,
+                    over(
+                        func.rank().label('rnk'),
+                        partition_by=twc.c.category_id,
+                        order_by=twc.c.updated_at.desc()
+                    ).label('rank')
+                )
+                .subquery(name='s2')
+            )
+
+            t1 = orm.aliased(Topic, name='t1')
+
+            query = (
+                db.query(
+                    s2.c.category_id,
+                    func.array_agg(t1.id, type_=ARRAY(Integer)).label('ids')
+                )
+                .join(t1, t1.category_id == s2.c.category_id)
+                .filter(t1.updated_at < s2.c.updated_at)
+                .group_by(s2.c.rank, s2.c.category_id)
+                .having(s2.c.rank == 25)
+            )
+
+            for (cat_id, topic_ids) in query.all():
+                self.changed_categories.add(cat_id)
+                to_delete.extend(topic_ids)
+
+            if to_delete:
+                db.query(Torrent).filter(Torrent.id.in_(to_delete)) \
+                    .delete(synchronize_session=False)
+                db.expire_all()
+                db.query(Topic).filter(Topic.id.in_(to_delete)) \
+                    .delete(synchronize_session=False)
+
+        if to_delete:
+            keys = ['{}.torrent'.format(tid) for tid in to_delete]
+            self.storage.bulk_delete(keys)
+
+        message = 'Cleanup removed {} torrents from {} categories'.format(
+            len(to_delete), len(self.changed_categories))
+        _logger.info(message)
         self.invalidate_cache()
-        _logger.info('Cleanup finished, %d torrents removed', removed)
 
     def daily_reset(self):
         """Reset user download counters"""
@@ -260,7 +317,7 @@ class Manager(object):
         with session_scope() as db:
             db.merge(torrent)
 
-        filename = self.config.TORRENT_PATH_PATTERN.format(tid)
+        filename = '{}.torrent'.format(tid)
 
         if old_infohash:
             self.storage.delete(filename)

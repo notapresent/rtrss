@@ -56,7 +56,7 @@
 function update_feed_link() {
     var catid = parseInt($('#treeview').data('catid'));
     var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
-    var passkey = $('#passkey').val();
+    var passkey = $.trim($('#passkey').val());
      if(passkey) {
         feed_url = feed_url + '?pk=' + passkey;
      }

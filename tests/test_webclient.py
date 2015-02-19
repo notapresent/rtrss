@@ -1,7 +1,7 @@
 import unittest
 
 from rtrss import webclient
-from . import AttrDict
+from tests import AttrDict
 
 
 class WebClientTestCase(unittest.TestCase):

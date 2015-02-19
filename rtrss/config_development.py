@@ -11,7 +11,10 @@ DEBUG = True
 
 SECRET_KEY = 'development key'
 
-FILESTORAGE_URL = 'file://{}'.format(DATA_DIR)
+FILESTORAGE_SETTINGS = {
+    'URL': 'file://{}/torrents'.format(DATA_DIR),
+}
+
 
 PORT = int(os.environ.get('C9_PORT', 8080))
 IP = os.environ.get('C9_IP', '0.0.0.0')
