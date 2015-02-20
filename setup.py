@@ -15,7 +15,7 @@ with open('reqs/deplinks.txt') as f:
 
 setup(
     name='rtrss',
-    version='0.3',
+    version='0.5',
     author='notapresent',
     author_email='notapresent@gmail.com',
     url='https://github.com/notapresent/rtrss',
