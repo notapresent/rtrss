@@ -9,6 +9,5 @@ tzlocal==1.1.2
 bencode==1.0
 google-api-python-client==1.3.1
 newrelic==2.42.0.35
-LogentriesLogger==0.2.1
 supervisor==3.1.3
 logentries==1.4.8

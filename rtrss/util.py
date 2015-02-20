@@ -3,10 +3,8 @@ import signal
 import logging
 import os
 import datetime
-from logging.handlers import RotatingFileHandler
 
 import newrelic.agent
-from logentries import LogentriesHandler
 
 from rtrss import config
 
@@ -36,15 +34,7 @@ def get_newreilc_app(name, timeout):
 
 
 def setup_logentries_logging(varname):
-    rootlogger = logging.getLogger()
-    if varname in os.environ:
-        token = os.environ[varname]
-        le_handler = LogentriesHandler(token)
-        formatter = logging.Formatter(config.LOG_FORMAT_LOGENTRIES)
-        le_handler.setFormatter(formatter)
-        rootlogger.addHandler(le_handler)
-        rootlogger.debug('Logging to logentries initialized')
-
+    pass
 
 def setup_logging(component_name):
     """Initialize logging and add handlers"""
