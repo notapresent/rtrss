@@ -18,7 +18,7 @@ if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
   cd $OPENSHIFT_REPO_DIR
   make create-leagent-conf
   make create-supervisord-conf
-  supervisorctl -c supervisord-openshift.conf reload
+  supervisorctl -c supervisord.conf reload
 
 else
   echo "Running on slave gear"
