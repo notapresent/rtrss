@@ -1,0 +1,21 @@
+#!/bin/bash
+printf '\n=== Running post-deploy action hook ===\n\n'
+
+# First check if we are running on Openshift
+if [ -z "$OPENSHIFT_GEAR_NAME" ]; then
+    echo "Not running on Openshift"
+    exit 0
+fi
+
+source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
+
+if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
+  echo "Runing on head gear, rebuilding supervisord config and restarting worker"
+  cd $OPENSHIFT_REPO_DIR
+  make create-supervisord-conf
+  supervisorctl -c supervisord-openshift.conf reread
+  supervisorctl -c supervisord-openshift.conf restart all
+
+else
+  echo "Running on slave gear"
+fi

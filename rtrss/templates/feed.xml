@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>{{ channel.title }}</title>
+<description>{{ channel.description }}</description>
+<link>{{ channel.link }}</link>
+<lastBuildDate>{{ channel.lastBuildDate }}</lastBuildDate>
+<ttl>{{ channel.ttl }}</ttl>
+
+{%- for item in items %}
+    <item>
+      <title>{{ item.title }}</title>
+        <enclosure type="application/x-bittorrent"
+                   url="{{ url_for('views.torrent', torrent_id=item.id, pk=passkey, _external=True) }}"/>
+      <guid isPermaLink="false">{{ item.guid }}</guid>
+      <pubDate>{{ item.pubDate }}</pubDate>
+    </item>
+{%- endfor %}
+
+</channel>
+</rss>

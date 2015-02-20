@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ super() }} - Главная{% endblock %}
+{% block head %}
+<style>
+    table#env {
+    width:100%;
+    table-layout: fixed;
+    font-family: "Courier New", Courier, monospace;
+    }
+    table#env tr td { word-break: break-all; word-wrap: break-word; }
+    table#env tr td:nth-child(1) { width: 25% }
+
+</style>
+{% endblock%}
+{% block content %}
+
+<h3>Environment</h3>
+
+<table class="table" id="env">
+    {% for k in env %}
+    <tr>
+        <td>{{ k }}</td>
+        <td class="wrap">{{ env[k] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

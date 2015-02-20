@@ -1,0 +1,30 @@
+body {
+    padding-top: 60px; /* Required padding for .navbar-fixed-top. Change if height of navigation changes. */
+}
+.navbar-brand { padding-top: 9px; }
+.navbar-brand .fa-stack { margin-right: 4px; }
+
+a.navbar-brand:hover, ul.nav li:hover {
+    -moz-text-shadow: 1px 1px 5px #bbb;
+     -webkit-text-shadow: 1px 1px 5px #bbb;
+     text-shadow: 1px 1px 5px #bbb;
+}
+
+li.list-group-item.node-selected { border-radius: 4px; }
+li.list-group-item button { display: none; }
+ul.list-group.open li.list-group-item.node-selected button { display: block; }
+
+ul.list-group li.list-group-item { display: none; }
+ul.list-group li.list-group-item.node-selected { display: block; }
+ul.list-group.open li.list-group-item { display: block; }
+
+ul.list-group li.list-group-item.node-selected span.indent { display: none;}
+ul.list-group.open li.list-group-item.node-selected span.indent { display: inline;}
+
+#feedform {
+    margin: 1em;
+}
+
+#copy-button.zeroclipboard-is-active { background-color: #ffa; }
+
+input#rsslink { cursor: text;}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{%- block head %}{{ super() }}{% endblock -%}
+
+{%- block content -%}
+<div class="row">
+    <div class="col-lg-8">
+
+        <div id="feedform">
+            <div class="form-group">
+                <label for="treeview">Выбор раздела</label>
+
+                <div id="treeview"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="passkey">Passkey</label>
+                <input id="passkey" type="text" class="form-control"
+                       placeholder="">
+            </div>
+
+            <div class="form-group">
+                <label for="rsslink">Ссылка на RSS</label>
+
+                <div class="input-group">
+                    <input id="rsslink" type="text"
+                           data-linkbase="{{ url_for('views.feed', _external=True) }}"
+                           class="form-control" readonly>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button"
+                                id="copy-button">
+                            <span class="glyphicon glyphicon-copy"></span>
+                        </button>
+                    </span>
+                </div>
+                <!-- /input-group -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-4"></div>
+</div>
+{%- endblock -%}
+
+{%- block foot -%}
+{{ super() }}
+<script src="{{ url_for('views.loadtree') }}"></script>
+<script src="{{ url_for('static', filename='bootstrap-treeview.js') }}"></script>
+<script src="{{ url_for('static', filename='ZeroClipboard.min.js') }}"></script>
+
+<script>
+
+function update_feed_link() {
+    var catid = parseInt($('#treeview').data('catid'));
+    var feed_url = $("#rsslink").data('linkbase') + (catid ? catid : '');
+    var passkey = $.trim($('#passkey').val());
+     if(passkey) {
+        feed_url = feed_url + '?pk=' + passkey;
+     }
+    $("#rsslink").attr('value', feed_url);
+}
+
+ZeroClipboard.config({
+    swfPath: "{{ url_for('static', filename='ZeroClipboard.swf') }}",
+    cacheBust: false,
+    } );
+var client = new ZeroClipboard( document.getElementById("copy-button") );
+
+client.on( "ready", function( readyEvent ) {
+
+    client.on( 'copy', function(event) {
+          event.clipboardData.setData('text/plain', $("#rsslink").attr('value'));
+        } );
+
+  client.on( "aftercopy", function( event ) {
+    //console.log('Copied text to clipboard: ' + event.data['text/plain']);
+    $("#copy-button").blur();
+
+  } );
+} );
+
+
+$(function() {
+    update_feed_link();
+
+    $('#passkey').change(update_feed_link);
+
+    $('#treeview').treeview({
+          enableLinks: false,
+          showTags: true,
+          data: treeData,
+          levels: 2,
+          showBorder: false,
+          expandIcon: 'glyphicon glyphicon-chevron-right',
+          collapseIcon: 'glyphicon glyphicon-chevron-down',
+          emptyIcon: 'fa fa-file-o',
+          nodeIcon: 'glyphicon' /* glyphicon-copy */
+    });
+
+    $('#treeview').on('click', 'li', function(event) {
+        $('#treeview ul').addClass('open');
+    });
+
+    $('#treeview').on('click', 'button.selectcat', function(event, node) {
+        $('#treeview ul').toggleClass('open');
+        update_feed_link();
+        event.stopPropagation();
+    });
+
+    $('#treeview').on('nodeSelected', function(event, node) {
+        $('#treeview').data('catid', node.fid);
+    });
+});
+
+</script>
+{%- endblock -%}
+

@@ -1,0 +1,35 @@
+<!-- Static navbar -->
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed"
+                    data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <a class="navbar-brand" href="{{ url_for('views.index') }}">
+                <span class="fa-stack fa-fw">
+                    <i class="fa fa-square-o fa-stack-2x"></i>
+                    <i class="fa fa-rss fa-stack-1x"></i>
+                </span>
+                <span>Rutracker.org RSS</span>
+            </a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a target="_blank" class="fblink" href="#">Обратная
+                    связь</a></li>
+                <li><a href="{{ url_for('views.faq') }}">FAQ</a></li>
+                {% if authorized %}
+                <li><a href="{{ url_for('views.dashboard') }}">ЦУП</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        <!--/.nav-collapse -->
+    </div>
+    <!--/.container -->
+</nav>
