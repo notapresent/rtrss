@@ -7,11 +7,16 @@ if [ -z "$OPENSHIFT_GEAR_NAME" ]; then
     exit 0
 fi
 
-source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "Activating virtialenv environamnt"
+    source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
+fi
+
 
 if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
   echo "Runing on head gear, rebuilding supervisord config and restarting worker"
   cd $OPENSHIFT_REPO_DIR
+  make create-leagent-conf
   make create-supervisord-conf
   supervisorctl -c supervisord-openshift.conf reload
 
