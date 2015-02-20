@@ -84,6 +84,7 @@ class Scheduler(object):
             return
         mgr = manager.Manager(self.config)
         mgr.run_task(task_name, *args, **kwargs)
+        del mgr
 
     def is_safety_window(self):
         win = timedelta(minutes=SAFETY_WINDOW_SIZE)
