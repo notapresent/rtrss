@@ -10,6 +10,9 @@ from setuptools import setup
 with open('reqs/production.txt') as f:
     _requirements = f.read().splitlines()
 
+with open('reqs/deplinks.txt') as f:
+    _deplinks = f.read().splitlines()
+
 setup(
     name='rtrss',
     version='0.3',
@@ -20,7 +23,9 @@ setup(
     long_description=__doc__,
     license='Apache 2.0',
     download_url='https://github.com/notapresent/rtrss/archive/master.zip',
+    packages=['rtrss'],
     install_requires=_requirements,
+    dependency_links=_deplinks,
     entry_points={
         'console_scripts': [
             'rtrssmgr = rtrss.worker:main',
