@@ -1,12 +1,6 @@
 #!/bin/bash
 printf '\n=== Running post-deploy action hook ===\n\n'
 
-# First check if we are running on Openshift
-if [ -z "$OPENSHIFT_GEAR_NAME" ]; then
-    echo "Not running on Openshift"
-    exit 0
-fi
-
 if [ -z "$VIRTUAL_ENV" ]; then
     echo "Activating virtialenv environamnt"
     source $OPENSHIFT_HOMEDIR/python/virtenv/bin/activate
@@ -14,8 +8,10 @@ fi
 
 
 if [ "$OPENSHIFT_GEAR_NAME" != "$OPENSHIFT_GEAR_UUID" ]; then
-  echo "Runing on head gear, rebuilding supervisord config and restarting worker"
+  echo "Runing on head gear"
   cd $OPENSHIFT_REPO_DIR
+
+  printf "\nRebuilding supervisord config and restarting worker\n"
   make create-leagent-conf
   make create-supervisord-conf
   supervisorctl -c supervisord.conf reload
